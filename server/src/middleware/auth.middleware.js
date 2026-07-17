@@ -3,24 +3,55 @@ import AppError from '../utils/AppError.js';
 import { verifyToken } from '../utils/jwt.js';
 
 export const authenticate = (req, _res, next) => {
-  const [scheme, token] = (req.headers.authorization || '').split(' ');
-
-  if (scheme !== 'Bearer' || !token) {
-    return next(new AppError('Authentication token is required', HTTP_STATUS.UNAUTHORIZED));
-  }
-
   try {
-    const payload = verifyToken(token);
-    const userId = Number(payload.sub);
+    const authHeader = req.headers.authorization;
 
-    if (!Number.isSafeInteger(userId) || !payload.role) {
-      throw new Error('Invalid token payload');
+    if (!authHeader) {
+      return next(
+        new AppError(
+          'Authorization header is required',
+          HTTP_STATUS.UNAUTHORIZED
+        )
+      );
     }
 
-    req.user = { id: userId, role: payload.role };
+    const [scheme, token] = authHeader.split(' ');
+
+    if (scheme !== 'Bearer' || !token) {
+      return next(
+        new AppError(
+          'Invalid authorization format. Use: Bearer <token>',
+          HTTP_STATUS.UNAUTHORIZED
+        )
+      );
+    }
+
+    const payload = verifyToken(token);
+
+    if (!payload) {
+      return next(
+        new AppError(
+          'Invalid authentication token',
+          HTTP_STATUS.UNAUTHORIZED
+        )
+      );
+    }
+
+    req.user = {
+      id: Number(payload.sub),
+      name: payload.name,
+      email: payload.email,
+      role: payload.role,
+    };
+
     return next();
-  } catch (_error) {
-    return next(new AppError('Invalid or expired authentication token', HTTP_STATUS.UNAUTHORIZED));
+  } catch (error) {
+    return next(
+      new AppError(
+        'Invalid or expired authentication token',
+        HTTP_STATUS.UNAUTHORIZED
+      )
+    );
   }
 };
 

@@ -4,7 +4,7 @@ dotenv.config();
 
 const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: Number.parseInt(process.env.PORT, 10) || 5000,
+  port: Number.parseInt(process.env.PORT, 10) || 1126,
   isProduction: process.env.NODE_ENV === 'production',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   jwt: {

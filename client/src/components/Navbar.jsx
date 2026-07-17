@@ -1,0 +1,4 @@
+import { Link } from 'react-router-dom'
+import { GraduationCap, Menu } from 'lucide-react'
+import Button from './Button'
+export default function Navbar() { return <header className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5"><Link to="/" className="flex items-center gap-2 text-lg font-bold"><span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400"><GraduationCap size={21}/></span>Examora</Link><nav className="hidden items-center gap-7 text-sm text-zinc-400 md:flex"><a href="#features" className="hover:text-white">Features</a><a href="#platform" className="hover:text-white">Platform</a><Link to="/login"><Button className="px-4 py-2.5">Login</Button></Link></nav><Menu className="text-zinc-300 md:hidden"/></header> }

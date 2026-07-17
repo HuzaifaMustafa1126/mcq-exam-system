@@ -1,0 +1,2 @@
+import { X } from 'lucide-react'
+export default function Modal({ open, onClose, title, children }) { if (!open) return null; return <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"><div className="glass w-full max-w-lg rounded-2xl p-6"><div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold">{title}</h2><button onClick={onClose} className="text-zinc-400 hover:text-white"><X/></button></div>{children}</div></div> }

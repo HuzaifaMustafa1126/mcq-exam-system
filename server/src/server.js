@@ -19,6 +19,11 @@ const shutdown = async (signal) => {
 };
 
 server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${env.port} is already in use. Set a different PORT value in .env.`);
+    process.exit(1);
+  }
+
   console.error('Server failed to start:', error);
   process.exit(1);
 });

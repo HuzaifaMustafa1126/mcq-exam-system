@@ -1,0 +1,3 @@
+import { useEffect, useState } from 'react'
+import { Clock3 } from 'lucide-react'
+export default function Timer({ initialMinutes = 30 }) { const [seconds,setSeconds] = useState(initialMinutes*60); useEffect(() => { const id = setInterval(() => setSeconds((s)=>Math.max(0,s-1)),1000); return () => clearInterval(id) },[]); const value = `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`; return <div className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 font-mono text-lg font-bold text-cyan-200"><Clock3 size={18}/>{value}</div> }

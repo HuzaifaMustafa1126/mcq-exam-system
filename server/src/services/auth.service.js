@@ -6,24 +6,66 @@ import { comparePassword } from '../utils/password.js';
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password';
 
 export const authenticateUser = async ({ email, password }) => {
-  const [users] = await pool.execute(
-    `SELECT id, name, email, password, role, status
-     FROM users
-     WHERE email = ?
-     LIMIT 1`,
-    [email],
+  // Validate input
+  if (!email || !password) {
+    throw new AppError(
+      'Email and password are required',
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
+
+  // Normalize email
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Find user
+  const [rows] = await pool.execute(
+    `
+      SELECT
+        id,
+        name,
+        email,
+        password,
+        role,
+        status
+      FROM users
+      WHERE email = ?
+      LIMIT 1
+    `,
+    [normalizedEmail]
   );
 
-  const user = users[0];
+  const user = rows[0];
 
-  if (!user || !(await comparePassword(password, user.password))) {
-    throw new AppError(INVALID_CREDENTIALS_MESSAGE, HTTP_STATUS.UNAUTHORIZED);
+  // Invalid email
+  if (!user) {
+    throw new AppError(
+      INVALID_CREDENTIALS_MESSAGE,
+      HTTP_STATUS.UNAUTHORIZED
+    );
   }
 
+  // Compare password
+  const isPasswordCorrect = await comparePassword(
+    password,
+    user.password
+  );
+
+  if (!isPasswordCorrect) {
+    throw new AppError(
+      INVALID_CREDENTIALS_MESSAGE,
+      HTTP_STATUS.UNAUTHORIZED
+    );
+  }
+
+  // Check account status
   if (user.status !== 'active') {
-    throw new AppError('Your account is not active', HTTP_STATUS.FORBIDDEN);
+    throw new AppError(
+      'Your account has been disabled. Please contact the administrator.',
+      HTTP_STATUS.FORBIDDEN
+    );
   }
 
+  // Return user without password
   return {
     id: user.id,
     name: user.name,
