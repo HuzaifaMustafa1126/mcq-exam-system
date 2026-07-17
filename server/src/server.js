@@ -5,26 +5,23 @@ import env from './config/env.js';
 
 const server = http.createServer(app);
 
-const startServer = async () => {
-  try {
-    await testDatabaseConnection();
-    console.info('MySQL database connected');
-  } catch (error) {
-    console.warn(`MySQL connection unavailable: ${error.message}`);
-  }
-
-  server.listen(env.port, () => {
-    console.info(`Server listening on port ${env.port} (${env.nodeEnv})`);
-  });
-};
-
 const shutdown = async (signal) => {
   console.info(`${signal} received. Shutting down gracefully...`);
-  server.close(async () => {
+  server.close(async (error) => {
+    if (error) {
+      console.error('Server shutdown failed:', error);
+      process.exit(1);
+    }
+
     await closeDatabasePool();
     process.exit(0);
   });
 };
+
+server.on('error', (error) => {
+  console.error('Server failed to start:', error);
+  process.exit(1);
+});
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
@@ -32,5 +29,13 @@ process.on('unhandledRejection', (error) => {
   console.error('Unhandled promise rejection:', error);
   shutdown('unhandledRejection');
 });
+
+const startServer = async () => {
+  await testDatabaseConnection();
+
+  server.listen(env.port, () => {
+    console.info(`Server listening on port ${env.port} (${env.nodeEnv})`);
+  });
+};
 
 startServer();
