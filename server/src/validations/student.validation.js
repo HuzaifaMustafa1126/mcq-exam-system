@@ -152,5 +152,11 @@ export const listStudentsValidation = [
   query('search').optional().isString().withMessage('Search must be a string')
     .bail().trim().isLength({ max: 150 })
     .withMessage('Search must not exceed 150 characters'),
+  query('semester').optional().isInt({ min: 1, max: 20 })
+    .withMessage('Semester must be an integer between 1 and 20').toInt(),
+  query('section').optional().trim().isLength({ min: 1, max: 30 })
+    .withMessage('Section must be between 1 and 30 characters'),
+  query('status').optional().isIn(['active', 'inactive', 'suspended'])
+    .withMessage('Status must be active, inactive, or suspended'),
   handleValidationErrors,
 ];

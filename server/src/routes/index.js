@@ -17,6 +17,7 @@ const router = Router();
 router.use(API_PREFIX, healthRoutes);
 router.use(`${API_PREFIX}/auth`, authRoutes);
 router.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
+router.use(`${API_PREFIX}/admin/dashboard`, dashboardRoutes);
 router.use(`${API_PREFIX}/teachers`, teacherRoutes);
 router.use(`${API_PREFIX}/students`, studentRoutes);
 router.use(`${API_PREFIX}/student/exams`, studentExamRoutes);

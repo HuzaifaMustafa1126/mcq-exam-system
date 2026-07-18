@@ -110,22 +110,36 @@ export const createStudent = async ({
   }
 };
 
-export const getStudents = async ({ page, limit, search }) => {
+export const getStudents = async ({ page, limit, search, semester, section, status }) => {
   const offset = (page - 1) * limit;
-  const searchTerm = search ? `%${search}%` : null;
-  const whereClause = searchTerm
-    ? 'WHERE users.name LIKE ? OR users.email LIKE ? OR students.student_number LIKE ?'
-    : '';
-  const searchValues = searchTerm ? [searchTerm, searchTerm, searchTerm] : [];
+  const filters = [];
+  const values = [];
+  if (search) {
+    filters.push('(users.name LIKE ? OR users.email LIKE ? OR students.student_number LIKE ?)');
+    values.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (semester !== undefined) {
+    filters.push('students.semester = ?');
+    values.push(semester);
+  }
+  if (section) {
+    filters.push('students.section = ?');
+    values.push(section);
+  }
+  if (status) {
+    filters.push('users.status = ?');
+    values.push(status);
+  }
+  const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
 
   const [studentsResult, totalResult] = await Promise.all([
     pool.execute(
       `${studentSelect} ${whereClause} ORDER BY students.id DESC LIMIT ? OFFSET ?`,
-      [...searchValues, limit, offset]
+      [...values, limit, offset]
     ),
     pool.execute(
       `SELECT COUNT(*) AS total FROM students INNER JOIN users ON users.id = students.user_id ${whereClause}`,
-      searchValues
+      values
     ),
   ]);
 

@@ -107,8 +107,10 @@ export const createTeacher = async ({
 export const getTeachers = async ({ page, limit, search }) => {
   const offset = (page - 1) * limit;
   const searchTerm = search ? `%${search}%` : null;
-  const whereClause = searchTerm ? 'WHERE users.name LIKE ? OR users.email LIKE ?' : '';
-  const searchValues = searchTerm ? [searchTerm, searchTerm] : [];
+  const whereClause = searchTerm
+    ? 'WHERE users.name LIKE ? OR users.email LIKE ? OR teachers.employee_number LIKE ?'
+    : '';
+  const searchValues = searchTerm ? [searchTerm, searchTerm, searchTerm] : [];
 
   const [teachersResult, totalResult] = await Promise.all([
     pool.execute(
