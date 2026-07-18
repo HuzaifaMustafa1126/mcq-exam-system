@@ -24,7 +24,7 @@ export const start = asyncHandler(async (req, res) => {
 });
 
 export const getQuestions = asyncHandler(async (req, res) => {
-  const data = await getStudentExamQuestions(req.user.id, req.params.id);
+  const data = await getStudentExamQuestions(req.user.id, req.params.examId, req.query);
   return sendSuccess(res, { data });
 });
 

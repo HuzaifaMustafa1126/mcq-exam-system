@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body, query, validationResult } from 'express-validator';
 import {
   getAll,
   getById,
@@ -31,10 +31,24 @@ const submitValidation = [
   },
 ];
 
+const questionsPaginationValidation = [
+  query('page').optional().default(1).isInt({ min: 1 })
+    .withMessage('Page must be a positive integer').toInt(),
+  query('limit').optional().default(20).isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100').toInt(),
+  (req, _res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new AppError('Validation failed', HTTP_STATUS.UNPROCESSABLE_ENTITY, errors.array()));
+    }
+    return next();
+  },
+];
+
 router.get('/', getAll);
 router.get('/:id', getById);
 router.post('/:examId/start', start);
-router.get('/:id/questions', getQuestions);
+router.get('/:examId/questions', questionsPaginationValidation, getQuestions);
 router.post('/:id/submit', submitValidation, submit);
 
 export default router;

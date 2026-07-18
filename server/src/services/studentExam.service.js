@@ -98,6 +98,9 @@ const getInProgressAttempt = async (connection, studentId, examId) => {
   if (!attempt || attempt.status !== 'in_progress') {
     throw new AppError('Start the exam before accessing its questions', HTTP_STATUS.CONFLICT);
   }
+  if (attempt.expiresAt && new Date(attempt.expiresAt) <= new Date()) {
+    throw new AppError('This exam attempt has expired', HTTP_STATUS.CONFLICT);
+  }
   return attempt;
 };
 
@@ -212,13 +215,19 @@ export const startStudentExam = async (userId, examIdParam) => {
   }
 };
 
-export const getStudentExamQuestions = async (userId, examIdParam) => {
+export const getStudentExamQuestions = async (userId, examIdParam, { page = 1, limit = 20 } = {}) => {
   const examId = toPositiveId(examIdParam, 'Exam id');
+  const offset = (page - 1) * limit;
   const connection = await pool.getConnection();
   try {
     const studentId = await getStudentId(connection, userId);
-    await getAvailableExam(connection, examId);
+    const exam = await getAvailableExam(connection, examId);
     const attempt = await getInProgressAttempt(connection, studentId, examId);
+    const [totalRows] = await connection.execute(
+      'SELECT COUNT(*) AS total FROM exam_questions WHERE exam_id = ?',
+      [examId]
+    );
+    const totalQuestions = Number(totalRows[0].total);
     const [questionRows] = await connection.execute(
       `SELECT
         questions.id,
@@ -228,21 +237,26 @@ export const getStudentExamQuestions = async (userId, examIdParam) => {
        FROM exam_questions
        INNER JOIN questions ON questions.id = exam_questions.question_id
        WHERE exam_questions.exam_id = ?
-       ORDER BY exam_questions.display_order ASC`,
-      [examId]
+       ORDER BY exam_questions.display_order ASC
+       LIMIT ? OFFSET ?`,
+      [examId, limit, offset]
     );
-    const [optionRows] = await connection.execute(
-      `SELECT
-        question_options.question_id AS questionId,
-        question_options.id,
-        question_options.option_text AS optionText,
-        question_options.display_order AS displayOrder
-       FROM question_options
-       INNER JOIN exam_questions ON exam_questions.question_id = question_options.question_id
-       WHERE exam_questions.exam_id = ?
-       ORDER BY question_options.question_id, question_options.display_order ASC`,
-      [examId]
-    );
+    const questionIds = questionRows.map((question) => question.id);
+    let optionRows = [];
+    if (questionIds.length > 0) {
+      const placeholders = questionIds.map(() => '?').join(', ');
+      [optionRows] = await connection.execute(
+        `SELECT
+          question_id AS questionId,
+          id,
+          option_text AS optionText,
+          display_order AS displayOrder
+         FROM question_options
+         WHERE question_id IN (${placeholders})
+         ORDER BY question_id, display_order ASC`,
+        questionIds
+      );
+    }
     const optionsByQuestionId = new Map();
     for (const option of optionRows) {
       const options = optionsByQuestionId.get(option.questionId) ?? [];
@@ -252,12 +266,22 @@ export const getStudentExamQuestions = async (userId, examIdParam) => {
 
     return {
       attemptId: attempt.id,
+      expiresAt: attempt.expiresAt,
+      title: exam.title,
+      duration: Number(exam.durationMinutes),
+      totalQuestions,
       questions: questionRows.map((question) => ({
         id: question.id,
         questionText: question.questionText,
         marks: question.marks,
         options: optionsByQuestionId.get(question.id) ?? [],
       })),
+      pagination: {
+        page,
+        limit,
+        total: totalQuestions,
+        totalPages: Math.ceil(totalQuestions / limit),
+      },
     };
   } finally {
     connection.release();
