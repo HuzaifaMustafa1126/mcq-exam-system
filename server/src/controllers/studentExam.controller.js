@@ -19,7 +19,7 @@ export const getById = asyncHandler(async (req, res) => {
 });
 
 export const start = asyncHandler(async (req, res) => {
-  const data = await startStudentExam(req.user.id, req.params.id);
+  const data = await startStudentExam(req.user.id, req.params.examId);
   return sendSuccess(res, { data });
 });
 

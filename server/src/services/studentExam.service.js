@@ -33,6 +33,7 @@ const getAvailableExam = async (connection, examId, { lock = false } = {}) => {
       exams.duration_minutes AS durationMinutes,
       exams.total_marks AS totalMarks,
       exams.pass_marks AS passingMarks,
+      exams.max_attempts AS maxAttempts,
       exams.starts_at AS startTime,
       exams.ends_at AS endTime,
       exams.status,
@@ -46,9 +47,43 @@ const getAvailableExam = async (connection, examId, { lock = false } = {}) => {
   return rows[0];
 };
 
+const getPublishedExamForStart = async (connection, examId) => {
+  const [rows] = await connection.execute(
+    `SELECT
+      id,
+      duration_minutes AS durationMinutes,
+      max_attempts AS maxAttempts,
+      status,
+      starts_at AS startTime,
+      ends_at AS endTime,
+      (starts_at IS NULL OR starts_at <= NOW())
+        AND (ends_at IS NULL OR ends_at >= NOW()) AS isWithinWindow
+     FROM exams
+     WHERE id = ?
+     FOR UPDATE`,
+    [examId]
+  );
+
+  if (!rows[0]) throw new AppError('Exam not found', HTTP_STATUS.NOT_FOUND);
+  if (rows[0].status !== 'published') {
+    throw new AppError('Only published exams can be started', HTTP_STATUS.CONFLICT);
+  }
+  if (Number(rows[0].isWithinWindow) !== 1) {
+    throw new AppError('Exam is not available at the current time', HTTP_STATUS.CONFLICT);
+  }
+
+  return rows[0];
+};
+
 const getLatestAttempt = async (connection, studentId, examId, { lock = false } = {}) => {
   const [rows] = await connection.execute(
-    `SELECT id, attempt_number AS attemptNumber, status, started_at AS startedAt, submitted_at AS submittedAt
+    `SELECT
+       id,
+       attempt_number AS attemptNumber,
+       status,
+       started_at AS startedAt,
+       expires_at AS expiresAt,
+       submitted_at AS submittedAt
      FROM student_exams
      WHERE student_id = ? AND exam_id = ?
      ORDER BY attempt_number DESC
@@ -121,27 +156,54 @@ export const startStudentExam = async (userId, examIdParam) => {
   try {
     await connection.beginTransaction();
     const studentId = await getStudentId(connection, userId);
-    const exam = await getAvailableExam(connection, examId, { lock: true });
-    const latestAttempt = await getLatestAttempt(connection, studentId, examId, { lock: true });
+    const exam = await getPublishedExamForStart(connection, examId);
+    let latestAttempt = await getLatestAttempt(connection, studentId, examId, { lock: true });
 
-    if (latestAttempt && latestAttempt.status !== 'submitted') {
+    if (latestAttempt?.status === 'in_progress' && latestAttempt.expiresAt
+      && new Date(latestAttempt.expiresAt) <= new Date()) {
+      await connection.execute(
+        "UPDATE student_exams SET status = 'expired' WHERE id = ?",
+        [latestAttempt.id]
+      );
+      latestAttempt = { ...latestAttempt, status: 'expired' };
+    }
+    if (latestAttempt?.status === 'in_progress') {
       throw new AppError('This exam attempt has already been started', HTTP_STATUS.CONFLICT);
+    }
+    if (latestAttempt && latestAttempt.attemptNumber >= exam.maxAttempts) {
+      throw new AppError('Maximum exam attempts have been reached', HTTP_STATUS.CONFLICT);
     }
 
     const attemptNumber = (latestAttempt?.attemptNumber ?? 0) + 1;
     const [result] = await connection.execute(
-      `INSERT INTO student_exams (student_id, exam_id, attempt_number, status, started_at)
-       VALUES (?, ?, ?, 'in_progress', NOW())`,
-      [studentId, examId, attemptNumber]
+      `INSERT INTO student_exams
+        (student_id, exam_id, attempt_number, status, started_at, expires_at)
+       SELECT
+         ?, ?, ?, 'in_progress', NOW(),
+         CASE
+           WHEN ends_at IS NOT NULL AND ends_at < DATE_ADD(NOW(), INTERVAL duration_minutes MINUTE)
+             THEN ends_at
+           ELSE DATE_ADD(NOW(), INTERVAL duration_minutes MINUTE)
+         END
+       FROM exams
+       WHERE id = ?`,
+      [studentId, examId, attemptNumber, examId]
     );
     const [attemptRows] = await connection.execute(
-      `SELECT id, attempt_number AS attemptNumber, status, started_at AS startedAt
+      `SELECT
+         id,
+         started_at AS startedAt,
+         expires_at AS expiresAt
        FROM student_exams WHERE id = ?`,
       [result.insertId]
     );
     await connection.commit();
 
-    return { exam, attempt: attemptRows[0] };
+    return {
+      attemptId: attemptRows[0].id,
+      startedAt: attemptRows[0].startedAt,
+      expiresAt: attemptRows[0].expiresAt,
+    };
   } catch (error) {
     await connection.rollback();
     translateDuplicateError(error);
@@ -252,15 +314,27 @@ export const submitStudentExam = async (userId, examIdParam, answers) => {
         exam_questions.question_id AS questionId,
         exam_questions.marks,
         exam_questions.negative_marks AS negativeMarks,
-        question_options.id AS correctOptionId
+        MAX(CASE WHEN question_options.is_correct = TRUE THEN question_options.id END) AS correctOptionId,
+        SUM(question_options.is_correct = TRUE) AS correctOptionCount
        FROM exam_questions
-       INNER JOIN question_options
+       LEFT JOIN question_options
          ON question_options.question_id = exam_questions.question_id
-         AND question_options.is_correct = TRUE
        WHERE exam_questions.exam_id = ?
+       GROUP BY
+         exam_questions.id,
+         exam_questions.question_id,
+         exam_questions.marks,
+         exam_questions.negative_marks,
+         exam_questions.display_order
        ORDER BY exam_questions.display_order ASC`,
       [examId]
     );
+    if (examQuestions.some((question) => Number(question.correctOptionCount) !== 1)) {
+      throw new AppError(
+        'Exam cannot be submitted because each question must have exactly one correct option',
+        HTTP_STATUS.CONFLICT
+      );
+    }
     const examQuestionById = new Map(examQuestions.map((question) => [question.questionId, question]));
 
     for (const questionId of answersByQuestionId.keys()) {

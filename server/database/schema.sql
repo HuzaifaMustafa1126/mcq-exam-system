@@ -150,6 +150,7 @@ CREATE TABLE student_exams (
   attempt_number TINYINT UNSIGNED NOT NULL DEFAULT 1,
   status ENUM('not_started', 'in_progress', 'submitted', 'expired') NOT NULL DEFAULT 'not_started',
   started_at DATETIME NULL,
+  expires_at DATETIME NULL,
   submitted_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -33,7 +33,7 @@ const submitValidation = [
 
 router.get('/', getAll);
 router.get('/:id', getById);
-router.post('/:id/start', start);
+router.post('/:examId/start', start);
 router.get('/:id/questions', getQuestions);
 router.post('/:id/submit', submitValidation, submit);
 
