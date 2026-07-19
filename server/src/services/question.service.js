@@ -51,6 +51,13 @@ const getTeacherIdForUser = async (connection, user) => {
   return rows[0].id;
 };
 
+const assertQuestionAccess = async (connection, questionId, user) => {
+  if (user.role !== 'teacher') return;
+  const teacherId = await getTeacherIdForUser(connection, user);
+  const [rows] = await connection.execute('SELECT id FROM questions WHERE id = ? AND created_by_teacher_id = ? LIMIT 1', [questionId, teacherId]);
+  if (!rows[0]) throw new AppError('Question not found', HTTP_STATUS.NOT_FOUND);
+};
+
 const insertOptions = async (connection, questionId, options) => {
   const values = options.map((option, index) => [
     questionId,
@@ -100,7 +107,7 @@ export const createQuestion = async (data, user) => {
   }
 };
 
-export const getQuestions = async ({ page, limit, search, subjectId, difficulty, status }) => {
+export const getQuestions = async ({ page, limit, search, subjectId, difficulty, status }, user) => {
   const offset = (page - 1) * limit;
   const filters = [];
   const values = [];
@@ -119,6 +126,14 @@ export const getQuestions = async ({ page, limit, search, subjectId, difficulty,
   if (status) {
     filters.push('questions.status = ?');
     values.push(status);
+  }
+  if (user?.role === 'teacher') {
+    const connection = await pool.getConnection();
+    try {
+      const teacherId = await getTeacherIdForUser(connection, user);
+      filters.push('questions.created_by_teacher_id = ?');
+      values.push(teacherId);
+    } finally { connection.release(); }
   }
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
   const countSql = `SELECT COUNT(*) AS total FROM questions
@@ -139,20 +154,21 @@ export const getQuestions = async ({ page, limit, search, subjectId, difficulty,
   };
 };
 
-export const getQuestionById = async (id) => {
-  const question = await getQuestionByIdWithExecutor(pool, id);
-  const options = await getQuestionOptions(pool, id);
-  return {
-    ...question,
-    options,
-    correctOption: options.find((option) => Boolean(option.isCorrect)) ?? null,
-  };
+export const getQuestionById = async (id, user) => {
+  const connection = await pool.getConnection();
+  try {
+    await assertQuestionAccess(connection, id, user);
+    const question = await getQuestionByIdWithExecutor(connection, id);
+    const options = await getQuestionOptions(connection, id);
+    return { ...question, options, correctOption: options.find((option) => Boolean(option.isCorrect)) ?? null };
+  } finally { connection.release(); }
 };
 
-export const updateQuestion = async (id, updates) => {
+export const updateQuestion = async (id, updates, user) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    await assertQuestionAccess(connection, id, user);
     await getQuestionByIdWithExecutor(connection, id, { lock: true });
     if (updates.subjectId !== undefined) await ensureSubjectExists(connection, updates.subjectId);
     const columnByField = {
@@ -178,7 +194,7 @@ export const updateQuestion = async (id, updates) => {
       await insertOptions(connection, id, updates.options);
     }
     await connection.commit();
-    return await getQuestionById(id);
+    return await getQuestionById(id, user);
   } catch (error) {
     await connection.rollback();
     translateDatabaseError(error);
@@ -187,10 +203,11 @@ export const updateQuestion = async (id, updates) => {
   }
 };
 
-export const deleteQuestion = async (id) => {
+export const deleteQuestion = async (id, user) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    await assertQuestionAccess(connection, id, user);
     await getQuestionByIdWithExecutor(connection, id, { lock: true });
     await connection.execute('DELETE FROM question_options WHERE question_id = ?', [id]);
     await connection.execute('DELETE FROM questions WHERE id = ?', [id]);

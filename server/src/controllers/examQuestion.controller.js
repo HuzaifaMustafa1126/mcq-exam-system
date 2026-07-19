@@ -8,16 +8,16 @@ import {
 import { sendSuccess } from '../utils/response.js';
 
 export const assign = asyncHandler(async (req, res) => {
-  const data = await assignQuestions(req.params.examId, req.body.questionIds);
+  const data = await assignQuestions(req.params.examId, req.body.questionIds, req.user);
   return sendSuccess(res, { statusCode: HTTP_STATUS.CREATED, data });
 });
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getAssignedQuestions(req.params.examId);
+  const data = await getAssignedQuestions(req.params.examId, req.user);
   return sendSuccess(res, { data });
 });
 
 export const remove = asyncHandler(async (req, res) => {
-  const data = await removeAssignedQuestion(req.params.examId, req.params.questionId);
+  const data = await removeAssignedQuestion(req.params.examId, req.params.questionId, req.user);
   return sendSuccess(res, { data });
 });

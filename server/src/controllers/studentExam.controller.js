@@ -20,7 +20,7 @@ export const getById = asyncHandler(async (req, res) => {
 
 export const start = asyncHandler(async (req, res) => {
   const data = await startStudentExam(req.user.id, req.params.examId);
-  return sendSuccess(res, { data });
+  return sendSuccess(res, { data: { ...data, startTime: data.startedAt, endTime: data.expiresAt, duration: data.durationMinutes } });
 });
 
 export const getQuestions = asyncHandler(async (req, res) => {
@@ -29,6 +29,6 @@ export const getQuestions = asyncHandler(async (req, res) => {
 });
 
 export const submit = asyncHandler(async (req, res) => {
-  const data = await submitStudentExam(req.user.id, req.params.id, req.body.answers);
+  const data = await submitStudentExam(req.user.id, req.params.examId, req.body.answers);
   return sendSuccess(res, { data });
 });

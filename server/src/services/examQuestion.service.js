@@ -11,6 +11,14 @@ const getExam = async (connection, examId, { lock = false } = {}) => {
   return rows[0];
 };
 
+const assertExamAccess = async (connection, examId, user) => {
+  if (user.role !== 'teacher') return;
+  const [teacherRows] = await connection.execute('SELECT id FROM teachers WHERE user_id = ? LIMIT 1', [user.id]);
+  if (!teacherRows[0]) throw new AppError('Teacher profile not found', HTTP_STATUS.FORBIDDEN);
+  const [rows] = await connection.execute('SELECT id FROM exams WHERE id = ? AND created_by_teacher_id = ? LIMIT 1', [examId, teacherRows[0].id]);
+  if (!rows[0]) throw new AppError('Exam not found', HTTP_STATUS.NOT_FOUND);
+};
+
 const getQuestions = async (connection, questionIds) => {
   const placeholders = questionIds.map(() => '?').join(', ');
   const [questions] = await connection.execute(
@@ -47,11 +55,12 @@ const translateDuplicateError = (error) => {
   throw error;
 };
 
-export const assignQuestions = async (examId, questionIds) => {
+export const assignQuestions = async (examId, questionIds, user) => {
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
+    await assertExamAccess(connection, examId, user);
     const exam = await getExam(connection, examId, { lock: true });
     const questions = await getQuestions(connection, questionIds);
 
@@ -97,10 +106,11 @@ export const assignQuestions = async (examId, questionIds) => {
   }
 };
 
-export const getAssignedQuestions = async (examId) => {
+export const getAssignedQuestions = async (examId, user) => {
   const connection = await pool.getConnection();
 
   try {
+    await assertExamAccess(connection, examId, user);
     await getExam(connection, examId);
     const [questions] = await connection.execute(
       `SELECT
@@ -125,11 +135,12 @@ export const getAssignedQuestions = async (examId) => {
   }
 };
 
-export const removeAssignedQuestion = async (examId, questionId) => {
+export const removeAssignedQuestion = async (examId, questionId, user) => {
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
+    await assertExamAccess(connection, examId, user);
     await getExam(connection, examId, { lock: true });
     const [result] = await connection.execute(
       'DELETE FROM exam_questions WHERE exam_id = ? AND question_id = ?',

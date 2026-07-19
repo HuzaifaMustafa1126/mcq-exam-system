@@ -48,6 +48,13 @@ const getTeacherIdForUser = async (connection, user) => {
   return rows[0].id;
 };
 
+const assertExamAccess = async (connection, examId, user) => {
+  if (user.role !== 'teacher') return;
+  const teacherId = await getTeacherIdForUser(connection, user);
+  const [rows] = await connection.execute('SELECT id FROM exams WHERE id = ? AND created_by_teacher_id = ? LIMIT 1', [examId, teacherId]);
+  if (!rows[0]) throw new AppError('Exam not found', HTTP_STATUS.NOT_FOUND);
+};
+
 const validateExamConstraints = ({ totalMarks, passingMarks, startTime, endTime }) => {
   if (Number(passingMarks) > Number(totalMarks)) {
     throw new AppError('Passing marks cannot exceed total marks', HTTP_STATUS.UNPROCESSABLE_ENTITY);
@@ -92,7 +99,7 @@ export const createExam = async (data, user) => {
   }
 };
 
-export const getExams = async ({ page, limit, search, subjectId, status }) => {
+export const getExams = async ({ page, limit, search, subjectId, status }, user) => {
   const offset = (page - 1) * limit;
   const filters = [];
   const values = [];
@@ -107,6 +114,14 @@ export const getExams = async ({ page, limit, search, subjectId, status }) => {
   if (status) {
     filters.push('exams.status = ?');
     values.push(status);
+  }
+  if (user?.role === 'teacher') {
+    const connection = await pool.getConnection();
+    try {
+      const teacherId = await getTeacherIdForUser(connection, user);
+      filters.push('exams.created_by_teacher_id = ?');
+      values.push(teacherId);
+    } finally { connection.release(); }
   }
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
   const countSql = `SELECT COUNT(*) AS total FROM exams
@@ -127,12 +142,16 @@ export const getExams = async ({ page, limit, search, subjectId, status }) => {
   };
 };
 
-export const getExamById = (id) => getExamByIdWithExecutor(pool, id);
+export const getExamById = async (id, user) => {
+  const connection = await pool.getConnection();
+  try { await assertExamAccess(connection, id, user); return await getExamByIdWithExecutor(connection, id); } finally { connection.release(); }
+};
 
-export const updateExam = async (id, updates) => {
+export const updateExam = async (id, updates, user) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    await assertExamAccess(connection, id, user);
     const currentExam = await getExamByIdWithExecutor(connection, id, { lock: true });
     if (updates.subjectId !== undefined) await ensureSubjectExists(connection, updates.subjectId);
 
@@ -165,7 +184,7 @@ export const updateExam = async (id, updates) => {
     }
     await connection.execute(`UPDATE exams SET ${fields.join(', ')} WHERE id = ?`, [...values, id]);
     await connection.commit();
-    return await getExamById(id);
+    return await getExamById(id, user);
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -174,10 +193,11 @@ export const updateExam = async (id, updates) => {
   }
 };
 
-export const deleteExam = async (id) => {
+export const deleteExam = async (id, user) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    await assertExamAccess(connection, id, user);
     await getExamByIdWithExecutor(connection, id, { lock: true });
     await connection.execute('DELETE FROM exams WHERE id = ?', [id]);
     await connection.commit();

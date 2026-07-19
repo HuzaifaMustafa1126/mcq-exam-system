@@ -65,8 +65,8 @@ const getPublishedExamForStart = async (connection, examId) => {
   );
 
   if (!rows[0]) throw new AppError('Exam not found', HTTP_STATUS.NOT_FOUND);
-  if (rows[0].status !== 'published') {
-    throw new AppError('Only published exams can be started', HTTP_STATUS.CONFLICT);
+  if (!['published', 'active'].includes(rows[0].status)) {
+    throw new AppError('Only active published exams can be started', HTTP_STATUS.CONFLICT);
   }
   if (Number(rows[0].isWithinWindow) !== 1) {
     throw new AppError('Exam is not available at the current time', HTTP_STATUS.CONFLICT);
@@ -206,6 +206,7 @@ export const startStudentExam = async (userId, examIdParam) => {
       attemptId: attemptRows[0].id,
       startedAt: attemptRows[0].startedAt,
       expiresAt: attemptRows[0].expiresAt,
+      durationMinutes: Number(exam.durationMinutes),
     };
   } catch (error) {
     await connection.rollback();
@@ -228,7 +229,9 @@ export const getStudentExamQuestions = async (userId, examIdParam, { page = 1, l
       [examId]
     );
     const totalQuestions = Number(totalRows[0].total);
-    const [questionRows] = await connection.execute(
+    // MySQL prepared-statement support for bound LIMIT/OFFSET varies by server mode.
+    // Both values have already passed integer validation in the route.
+    const [questionRows] = await connection.query(
       `SELECT
         questions.id,
         questions.question_text AS questionText,
@@ -238,8 +241,8 @@ export const getStudentExamQuestions = async (userId, examIdParam, { page = 1, l
        INNER JOIN questions ON questions.id = exam_questions.question_id
        WHERE exam_questions.exam_id = ?
        ORDER BY exam_questions.display_order ASC
-       LIMIT ? OFFSET ?`,
-      [examId, limit, offset]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      [examId]
     );
     const questionIds = questionRows.map((question) => question.id);
     let optionRows = [];
@@ -260,7 +263,7 @@ export const getStudentExamQuestions = async (userId, examIdParam, { page = 1, l
     const optionsByQuestionId = new Map();
     for (const option of optionRows) {
       const options = optionsByQuestionId.get(option.questionId) ?? [];
-      options.push({ id: option.id, optionText: option.optionText, displayOrder: option.displayOrder });
+      options.push({ id: option.id, text: option.optionText });
       optionsByQuestionId.set(option.questionId, options);
     }
 
@@ -272,7 +275,7 @@ export const getStudentExamQuestions = async (userId, examIdParam, { page = 1, l
       totalQuestions,
       questions: questionRows.map((question) => ({
         id: question.id,
-        questionText: question.questionText,
+        question: question.questionText,
         marks: question.marks,
         options: optionsByQuestionId.get(question.id) ?? [],
       })),
@@ -296,7 +299,7 @@ const normalizeAnswers = (answers) => {
   const answersByQuestionId = new Map();
   for (const answer of answers) {
     const questionId = toPositiveId(answer.questionId, 'Question id');
-    const selectedOptionId = toPositiveId(answer.selectedOptionId, 'Selected option id');
+    const selectedOptionId = toPositiveId(answer.optionId ?? answer.selectedOptionId, 'Selected option id');
     if (answersByQuestionId.has(questionId)) {
       throw new AppError('Duplicate answers are not allowed', HTTP_STATUS.UNPROCESSABLE_ENTITY);
     }
@@ -330,6 +333,10 @@ export const submitStudentExam = async (userId, examIdParam, answers) => {
     }
     if (attempt.status !== 'in_progress') {
       throw new AppError('This exam attempt cannot be submitted', HTTP_STATUS.CONFLICT);
+    }
+    if (attempt.expiresAt && new Date(attempt.expiresAt) <= new Date()) {
+      await connection.execute("UPDATE student_exams SET status = 'expired' WHERE id = ?", [attempt.id]);
+      throw new AppError('This exam attempt has expired', HTTP_STATUS.CONFLICT);
     }
 
     const [examQuestions] = await connection.execute(
@@ -420,7 +427,7 @@ export const submitStudentExam = async (userId, examIdParam, answers) => {
        WHERE id = ?`,
       [attempt.id]
     );
-    await connection.execute(
+    const [resultInsert] = await connection.execute(
       `INSERT INTO results
         (student_exam_id, total_questions, attempted_questions, correct_answers, incorrect_answers,
          unattempted_answers, score, percentage, status, published_at)
@@ -446,6 +453,12 @@ export const submitStudentExam = async (userId, examIdParam, answers) => {
       wrong,
       percentage,
       status: resultStatus.toUpperCase(),
+      totalQuestions,
+      correctAnswers: correct,
+      wrongAnswers: wrong,
+      skippedQuestions: unattempted,
+      obtainedMarks: score,
+      resultId: resultInsert.insertId,
     };
   } catch (error) {
     await connection.rollback();

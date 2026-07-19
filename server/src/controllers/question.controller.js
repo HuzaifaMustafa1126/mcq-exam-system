@@ -15,21 +15,21 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getQuestions(req.query);
+  const data = await getQuestions(req.query, req.user);
   return sendSuccess(res, { data });
 });
 
 export const getById = asyncHandler(async (req, res) => {
-  const question = await getQuestionById(req.params.id);
+  const question = await getQuestionById(req.params.id, req.user);
   return sendSuccess(res, { data: question });
 });
 
 export const update = asyncHandler(async (req, res) => {
-  const question = await updateQuestion(req.params.id, req.body);
+  const question = await updateQuestion(req.params.id, req.body, req.user);
   return sendSuccess(res, { data: question });
 });
 
 export const remove = asyncHandler(async (req, res) => {
-  await deleteQuestion(req.params.id);
+  await deleteQuestion(req.params.id, req.user);
   return sendSuccess(res, { data: { message: 'Question deleted successfully' } });
 });

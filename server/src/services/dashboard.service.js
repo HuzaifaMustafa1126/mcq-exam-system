@@ -1,4 +1,6 @@
 import pool from '../config/db.js';
+import { HTTP_STATUS } from '../constants/httpStatus.js';
+import AppError from '../utils/AppError.js';
 
 const getCount = async (query, values = []) => {
   const [rows] = await pool.execute(query, values);
@@ -76,5 +78,32 @@ export const getDashboardMetrics = async () => {
       teachers: latestTeachers,
       exams: latestExams,
     },
+  };
+};
+
+/** Dashboard deliberately uses the student profile id, never a supplied id. */
+export const getStudentDashboard = async (userId) => {
+  const [studentRows] = await pool.execute('SELECT id FROM students WHERE user_id = ? LIMIT 1', [userId]);
+  if (!studentRows[0]) throw new AppError('Student profile not found', HTTP_STATUS.FORBIDDEN);
+  const studentId = studentRows[0].id;
+  const availableWhere = `exams.status IN ('published', 'active')
+    AND (exams.starts_at IS NULL OR exams.starts_at <= NOW())
+    AND (exams.ends_at IS NULL OR exams.ends_at >= NOW())`;
+  const [availableRows, upcomingRows, completedRows, averageRows, recentRows] = await Promise.all([
+    pool.execute(`SELECT COUNT(*) AS total FROM exams WHERE ${availableWhere}`),
+    pool.execute(`SELECT COUNT(*) AS total FROM exams WHERE exams.status IN ('published', 'active') AND exams.starts_at > NOW()`),
+    pool.execute(`SELECT COUNT(*) AS total FROM results INNER JOIN student_exams ON student_exams.id = results.student_exam_id WHERE student_exams.student_id = ?`, [studentId]),
+    pool.execute(`SELECT COALESCE(ROUND(AVG(results.percentage), 2), 0) AS averageScore FROM results INNER JOIN student_exams ON student_exams.id = results.student_exam_id WHERE student_exams.student_id = ?`, [studentId]),
+    pool.execute(`SELECT results.id, student_exams.id AS attemptId, exams.title AS examTitle, subjects.name AS subject, results.percentage, UPPER(results.status) AS status, student_exams.submitted_at AS submittedAt
+      FROM results INNER JOIN student_exams ON student_exams.id = results.student_exam_id
+      INNER JOIN exams ON exams.id = student_exams.exam_id INNER JOIN subjects ON subjects.id = exams.subject_id
+      WHERE student_exams.student_id = ? ORDER BY student_exams.submitted_at DESC LIMIT 5`, [studentId]),
+  ]);
+  return {
+    availableExams: Number(availableRows[0][0].total),
+    upcomingExams: Number(upcomingRows[0][0].total),
+    completedExams: Number(completedRows[0][0].total),
+    averageScore: Number(averageRows[0][0].averageScore),
+    recentResults: recentRows[0].map((result) => ({ ...result, percentage: Number(result.percentage) })),
   };
 };

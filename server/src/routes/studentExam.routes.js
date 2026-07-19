@@ -20,7 +20,9 @@ const submitValidation = [
   body('answers').isArray().withMessage('Answers must be an array'),
   body('answers.*.questionId').isInt({ min: 1 })
     .withMessage('Each question id must be a positive integer').toInt(),
-  body('answers.*.selectedOptionId').isInt({ min: 1 })
+  body('answers.*.optionId').optional().isInt({ min: 1 })
+    .withMessage('Each option id must be a positive integer').toInt(),
+  body('answers.*.selectedOptionId').optional().isInt({ min: 1 })
     .withMessage('Each selected option id must be a positive integer').toInt(),
   (req, _res, next) => {
     const errors = validationResult(req);
@@ -49,6 +51,6 @@ router.get('/', getAll);
 router.get('/:id', getById);
 router.post('/:examId/start', start);
 router.get('/:examId/questions', questionsPaginationValidation, getQuestions);
-router.post('/:id/submit', submitValidation, submit);
+router.post('/:examId/submit', submitValidation, submit);
 
 export default router;
