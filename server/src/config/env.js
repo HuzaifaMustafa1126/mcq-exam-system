@@ -20,4 +20,12 @@ const env = Object.freeze({
   },
 });
 
+if (env.isProduction && !env.jwt.secret) {
+  throw new Error('JWT_SECRET must be configured in production');
+}
+
+if (env.isProduction && (!env.database.name || !env.database.user)) {
+  throw new Error('DB_NAME and DB_USER must be configured in production');
+}
+
 export default env;

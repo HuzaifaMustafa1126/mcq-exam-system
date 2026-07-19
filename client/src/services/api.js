@@ -27,3 +27,7 @@ api.interceptors.response.use(
 )
 
 export default api
+
+/** Returns a safe message for every Axios/API failure without exposing internals. */
+export const getApiErrorMessage = (error, fallback = 'Something went wrong. Please try again.') =>
+  error?.response?.data?.message || error?.message || fallback
