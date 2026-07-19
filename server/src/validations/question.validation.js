@@ -57,6 +57,8 @@ export const createQuestionValidation = [
 
 export const updateQuestionValidation = [
   questionIdValidation,
+  body('subjectId').optional().isInt({ min: 1 })
+    .withMessage('Subject id must be a positive integer').toInt(),
   body('questionText').optional().isString().withMessage('Question text must be a string')
     .bail().trim().notEmpty().withMessage('Question text cannot be empty')
     .bail().isLength({ max: 10000 }).withMessage('Question text must not exceed 10000 characters'),
@@ -78,7 +80,7 @@ export const updateQuestionValidation = [
   body('options.*.isCorrect').if(body('options').exists()).isBoolean({ strict: true })
     .withMessage('Option isCorrect must be a boolean').toBoolean(),
   body().custom((_value, { req }) => {
-    const editableFields = ['questionText', 'marks', 'difficulty', 'status', 'options'];
+    const editableFields = ['subjectId', 'questionText', 'marks', 'difficulty', 'status', 'options'];
     if (!Object.keys(req.body).some((field) => editableFields.includes(field))) {
       throw new Error('At least one question field must be provided');
     }
@@ -98,5 +100,9 @@ export const listQuestionsValidation = [
     .bail().trim().isLength({ max: 200 }).withMessage('Search must not exceed 200 characters'),
   query('subjectId').optional().isInt({ min: 1 })
     .withMessage('Subject id must be a positive integer').toInt(),
+  query('difficulty').optional().isIn(['easy', 'medium', 'hard'])
+    .withMessage('Difficulty must be easy, medium, or hard'),
+  query('status').optional().isIn(['active', 'inactive'])
+    .withMessage('Status must be active or inactive'),
   handleValidationErrors,
 ];

@@ -9,6 +9,7 @@ const subjectSelect = `
     code,
     description,
     status,
+    (SELECT COUNT(*) FROM questions WHERE questions.subject_id = subjects.id) AS totalQuestions,
     created_at AS createdAt,
     updated_at AS updatedAt
   FROM subjects
@@ -68,8 +69,8 @@ export const createSubject = async ({ name, code, description, status = 'active'
 export const getSubjects = async ({ page, limit, search }) => {
   const offset = (page - 1) * limit;
   const searchTerm = search ? `%${search}%` : null;
-  const whereClause = searchTerm ? 'WHERE name LIKE ? OR code LIKE ?' : '';
-  const searchValues = searchTerm ? [searchTerm, searchTerm] : [];
+  const whereClause = searchTerm ? 'WHERE name LIKE ? OR code LIKE ? OR description LIKE ?' : '';
+  const searchValues = searchTerm ? [searchTerm, searchTerm, searchTerm] : [];
 
   const [subjectsResult, totalResult] = await Promise.all([
     pool.execute(

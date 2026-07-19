@@ -44,6 +44,8 @@ const descriptionValidation = body('description').optional({ values: 'null' })
 
 const durationValidation = body('durationMinutes').isInt({ min: 1, max: 32767 })
   .withMessage('Duration must be between 1 and 32767 minutes').toInt();
+const maxAttemptsValidation = body('maxAttempts').optional().isInt({ min: 1, max: 255 })
+  .withMessage('Maximum attempts must be between 1 and 255').toInt();
 
 const totalMarksValidation = body('totalMarks').isFloat({ min: 0, max: 99999999.99 })
   .withMessage('Total marks must be between 0 and 99999999.99').toFloat();
@@ -70,6 +72,7 @@ export const createExamValidation = [
   titleValidation,
   descriptionValidation,
   durationValidation,
+  maxAttemptsValidation,
   totalMarksValidation,
   passingMarksValidation,
   startTimeValidation,
@@ -86,6 +89,8 @@ export const updateExamValidation = [
   descriptionValidation,
   body('durationMinutes').optional().isInt({ min: 1, max: 32767 })
     .withMessage('Duration must be between 1 and 32767 minutes').toInt(),
+  body('maxAttempts').optional().isInt({ min: 1, max: 255 })
+    .withMessage('Maximum attempts must be between 1 and 255').toInt(),
   body('totalMarks').optional().isFloat({ min: 0, max: 99999999.99 })
     .withMessage('Total marks must be between 0 and 99999999.99').toFloat(),
   body('passingMarks').optional().isFloat({ min: 0, max: 99999999.99 })
@@ -97,7 +102,7 @@ export const updateExamValidation = [
   body().custom((_value, { req }) => {
     const editableFields = [
       'subjectId', 'title', 'description', 'durationMinutes', 'totalMarks',
-      'passingMarks', 'startTime', 'endTime', 'status',
+      'passingMarks', 'maxAttempts', 'startTime', 'endTime', 'status',
     ];
     if (!Object.keys(req.body).some((field) => editableFields.includes(field))) {
       throw new Error('At least one exam field must be provided');
@@ -118,5 +123,7 @@ export const listExamsValidation = [
     .bail().trim().isLength({ max: 255 }).withMessage('Search must not exceed 255 characters'),
   query('subjectId').optional().isInt({ min: 1 })
     .withMessage('Subject id must be a positive integer').toInt(),
+  query('status').optional().isIn(statuses)
+    .withMessage('Status must be draft, published, active, closed, or archived'),
   handleValidationErrors,
 ];

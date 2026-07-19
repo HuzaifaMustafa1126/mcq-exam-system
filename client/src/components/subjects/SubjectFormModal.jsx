@@ -1,0 +1,13 @@
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import Button from '../Button'
+import Input from '../Input'
+import Modal from '../Modal'
+
+const defaults = { name: '', code: '', description: '', status: 'active' }
+
+export default function SubjectFormModal({ open, subject, onClose, onSubmit, isPending }) {
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({ defaultValues: defaults })
+  useEffect(() => { reset(subject || defaults) }, [subject, open, reset])
+  return <Modal open={open} onClose={onClose} title={subject ? 'Edit subject' : 'Add subject'}><form onSubmit={handleSubmit((values) => onSubmit({ ...values, code: values.code.toUpperCase(), description: values.description.trim() || null }))} noValidate className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><Input label="Subject name" placeholder="Computer Science" error={errors.name?.message} {...register('name', { required: 'Subject name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} /><Input label="Subject code" placeholder="CS-101" className="uppercase" error={errors.code?.message} {...register('code', { required: 'Subject code is required', maxLength: { value: 20, message: 'Code must not exceed 20 characters' } })} /></div><label className="block"><span className="mb-2 block text-sm font-medium text-zinc-300">Description</span><textarea rows="4" placeholder="Briefly describe this subject..." className="w-full resize-y rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10" {...register('description', { maxLength: { value: 10000, message: 'Description must not exceed 10,000 characters' } })} />{errors.description && <span className="mt-1 block text-xs text-rose-400">{errors.description.message}</span>}</label><label className="block"><span className="mb-2 block text-sm font-medium text-zinc-300">Status</span><select className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10" {...register('status')}><option value="active">Active</option><option value="inactive">Inactive</option></select></label><div className="flex justify-end gap-3 border-t border-white/10 pt-5"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" disabled={isPending}>{isPending ? 'Saving...' : subject ? 'Save changes' : 'Create subject'}</Button></div></form></Modal>
+}

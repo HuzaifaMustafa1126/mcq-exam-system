@@ -1,0 +1,8 @@
+import { useQuery } from '@tanstack/react-query'
+import { BookOpen, Hash } from 'lucide-react'
+import Modal from '../Modal'
+import Skeleton from '../Skeleton'
+import { getSubject } from '../../services/subjects'
+
+export default function SubjectDetailsModal({ subjectId, onClose }) { const { data, isPending, isError } = useQuery({ queryKey: ['subject', subjectId], queryFn: () => getSubject(subjectId), enabled: Boolean(subjectId) }); return <Modal open={Boolean(subjectId)} onClose={onClose} title="Subject details">{isPending && <div className="space-y-4"><Skeleton className="h-16" /><Skeleton className="h-14" /><Skeleton className="h-20" /></div>}{isError && <p className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-300">Unable to load this subject.</p>}{data && <div className="space-y-4"><div className="flex items-center gap-3"><span className="grid size-12 place-items-center rounded-xl bg-cyan-400/10 text-cyan-300"><BookOpen /></span><div><p className="font-semibold">{data.name}</p><p className="font-mono text-sm text-zinc-500">{data.code}</p></div></div><Detail icon={Hash} label="Questions" value={data.totalQuestions} /><Detail label="Status" value={data.status} /><div className="rounded-xl bg-white/[.03] p-4"><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Description</p><p className="mt-2 text-sm leading-6 text-zinc-300">{data.description || 'No description provided.'}</p></div></div>}</Modal> }
+function Detail({ icon: Icon, label, value }) { return <div className="flex items-center justify-between rounded-xl bg-white/[.03] px-4 py-3"><span className="flex items-center gap-2 text-sm text-zinc-500">{Icon && <Icon size={15} />}{label}</span><span className="text-sm capitalize text-zinc-200">{value}</span></div> }

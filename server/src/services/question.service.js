@@ -100,7 +100,7 @@ export const createQuestion = async (data, user) => {
   }
 };
 
-export const getQuestions = async ({ page, limit, search, subjectId }) => {
+export const getQuestions = async ({ page, limit, search, subjectId, difficulty, status }) => {
   const offset = (page - 1) * limit;
   const filters = [];
   const values = [];
@@ -111,6 +111,14 @@ export const getQuestions = async ({ page, limit, search, subjectId }) => {
   if (subjectId) {
     filters.push('questions.subject_id = ?');
     values.push(subjectId);
+  }
+  if (difficulty) {
+    filters.push('questions.difficulty = ?');
+    values.push(difficulty);
+  }
+  if (status) {
+    filters.push('questions.status = ?');
+    values.push(status);
   }
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
   const countSql = `SELECT COUNT(*) AS total FROM questions
@@ -146,7 +154,9 @@ export const updateQuestion = async (id, updates) => {
   try {
     await connection.beginTransaction();
     await getQuestionByIdWithExecutor(connection, id, { lock: true });
+    if (updates.subjectId !== undefined) await ensureSubjectExists(connection, updates.subjectId);
     const columnByField = {
+      subjectId: 'subject_id',
       questionText: 'question_text',
       marks: 'marks',
       difficulty: 'difficulty',

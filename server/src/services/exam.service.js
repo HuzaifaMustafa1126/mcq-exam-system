@@ -13,6 +13,7 @@ const examSelect = `
     (SELECT COUNT(*) FROM exam_questions WHERE exam_questions.exam_id = exams.id) AS totalQuestions,
     exams.total_marks AS totalMarks,
     exams.pass_marks AS passingMarks,
+    exams.max_attempts AS maxAttempts,
     exams.starts_at AS startTime,
     exams.ends_at AS endTime,
     exams.status,
@@ -65,8 +66,8 @@ export const createExam = async (data, user) => {
     const teacherId = await getTeacherIdForUser(connection, user);
     const [result] = await connection.execute(
       `INSERT INTO exams
-        (subject_id, created_by_teacher_id, title, description, duration_minutes, total_marks, pass_marks, starts_at, ends_at, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (subject_id, created_by_teacher_id, title, description, duration_minutes, total_marks, pass_marks, max_attempts, starts_at, ends_at, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.subjectId,
         teacherId,
@@ -75,6 +76,7 @@ export const createExam = async (data, user) => {
         data.durationMinutes,
         data.totalMarks,
         data.passingMarks,
+        data.maxAttempts ?? 1,
         data.startTime ?? null,
         data.endTime ?? null,
         data.status ?? 'draft',
@@ -90,7 +92,7 @@ export const createExam = async (data, user) => {
   }
 };
 
-export const getExams = async ({ page, limit, search, subjectId }) => {
+export const getExams = async ({ page, limit, search, subjectId, status }) => {
   const offset = (page - 1) * limit;
   const filters = [];
   const values = [];
@@ -101,6 +103,10 @@ export const getExams = async ({ page, limit, search, subjectId }) => {
   if (subjectId) {
     filters.push('exams.subject_id = ?');
     values.push(subjectId);
+  }
+  if (status) {
+    filters.push('exams.status = ?');
+    values.push(status);
   }
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
   const countSql = `SELECT COUNT(*) AS total FROM exams
@@ -144,6 +150,7 @@ export const updateExam = async (id, updates) => {
       durationMinutes: 'duration_minutes',
       totalMarks: 'total_marks',
       passingMarks: 'pass_marks',
+      maxAttempts: 'max_attempts',
       startTime: 'starts_at',
       endTime: 'ends_at',
       status: 'status',
