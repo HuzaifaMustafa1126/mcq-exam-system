@@ -8,6 +8,7 @@ import {
   updateTeacher,
 } from '../services/teacher.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { teacherListQuery } from '../utils/query.js';
 
 export const create = asyncHandler(async (req, res) => {
   const teacher = await createTeacher(req.body);
@@ -19,7 +20,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getTeachers(req.query);
+  const data = await getTeachers(teacherListQuery(req.query));
 
   return sendSuccess(res, { data });
 });

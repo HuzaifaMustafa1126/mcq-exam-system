@@ -7,6 +7,7 @@ import {
   submitStudentExam,
 } from '../services/studentExam.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { paginationQuery } from '../utils/query.js';
 
 export const getAll = asyncHandler(async (req, res) => {
   const data = await getStudentExams(req.user.id);
@@ -24,7 +25,7 @@ export const start = asyncHandler(async (req, res) => {
 });
 
 export const getQuestions = asyncHandler(async (req, res) => {
-  const data = await getStudentExamQuestions(req.user.id, req.params.examId, req.query);
+  const data = await getStudentExamQuestions(req.user.id, req.params.examId, paginationQuery(req.query));
   return sendSuccess(res, { data });
 });
 

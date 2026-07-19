@@ -88,9 +88,9 @@ export const getResults = async (user, { page = 1, limit = 20, search, studentId
   if (status) { conditions.push('results.status = ?'); values.push(status); }
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const offset = (page - 1) * limit;
-  const [results] = await pool.execute(
-    `${resultSelect} ${whereClause} ORDER BY student_exams.submitted_at DESC, student_exams.id DESC LIMIT ? OFFSET ?`,
-    [...values, limit, offset]
+  const [results] = await pool.query(
+    `${resultSelect} ${whereClause} ORDER BY student_exams.submitted_at DESC, student_exams.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+    values
   );
   const countSql = `SELECT COUNT(*) AS total, COALESCE(AVG(results.percentage), 0) AS averagePercentage,
     SUM(results.status = 'pass') AS passed, SUM(results.status = 'fail') AS failed
@@ -110,8 +110,8 @@ export const getResults = async (user, { page = 1, limit = 20, search, studentId
 export const getResultByAttemptId = async (user, attemptId) => {
   const scope = await getScope(user);
   const [results] = await pool.execute(
-    `${resultSelect} ${scope.clause ? `${scope.clause} AND` : 'WHERE'} (student_exams.id = ? OR results.id = ?) LIMIT 1`,
-    [...scope.values, attemptId, attemptId]
+    `${resultSelect} ${scope.clause ? `${scope.clause} AND` : 'WHERE'} student_exams.id = ? LIMIT 1`,
+    [...scope.values, attemptId]
   );
 
   if (!results[0]) {
@@ -133,7 +133,7 @@ export const getResultDetails = async (user, attemptId) => {
      LEFT JOIN question_options AS selected ON selected.id = student_answers.selected_option_id
      LEFT JOIN question_options AS correct ON correct.question_id = questions.id AND correct.is_correct = TRUE
      WHERE student_answers.student_exam_id = ? ORDER BY exam_questions.display_order ASC`,
-    [attemptId]
+    [result.attemptId]
   );
   return { ...result, answers: answers.map((answer) => ({ ...answer, marksAwarded: Number(answer.marksAwarded), isCorrect: answer.isCorrect === null ? null : Boolean(answer.isCorrect) })) };
 };

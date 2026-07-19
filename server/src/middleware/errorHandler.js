@@ -1,4 +1,3 @@
-import env from '../config/env.js';
 import { HTTP_STATUS } from '../constants/httpStatus.js';
 
 const errorHandler = (error, _req, res, _next) => {
@@ -9,10 +8,8 @@ const errorHandler = (error, _req, res, _next) => {
   const response = {
     success: false,
     message: error.isOperational ? error.message : 'Internal server error',
+    errors: error.details || [],
   };
-
-  if (error.details) response.details = error.details;
-  if (!env.isProduction && !error.isOperational) response.stack = error.stack;
   if (!error.isOperational) console.error(error);
 
   res.status(statusCode).json(response);

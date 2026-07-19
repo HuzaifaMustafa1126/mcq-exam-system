@@ -5,7 +5,7 @@ const TOKEN_KEY = 'mcq_token'
 const getToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:1126/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 

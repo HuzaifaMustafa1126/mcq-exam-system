@@ -36,7 +36,11 @@ process.on('unhandledRejection', (error) => {
 });
 
 const startServer = async () => {
-  await testDatabaseConnection();
+  const connected = await testDatabaseConnection();
+  if (!connected) {
+    process.exitCode = 1;
+    return;
+  }
 
   server.listen(env.port, () => {
     console.info(`Server listening on port ${env.port} (${env.nodeEnv})`);

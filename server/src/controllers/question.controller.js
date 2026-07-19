@@ -8,6 +8,7 @@ import {
   updateQuestion,
 } from '../services/question.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { questionListQuery } from '../utils/query.js';
 
 export const create = asyncHandler(async (req, res) => {
   const question = await createQuestion(req.body, req.user);
@@ -15,7 +16,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getQuestions(req.query, req.user);
+  const data = await getQuestions(questionListQuery(req.query), req.user);
   return sendSuccess(res, { data });
 });
 

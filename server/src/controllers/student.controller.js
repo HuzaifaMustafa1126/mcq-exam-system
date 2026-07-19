@@ -8,6 +8,7 @@ import {
   updateStudent,
 } from '../services/student.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { studentListQuery } from '../utils/query.js';
 
 export const create = asyncHandler(async (req, res) => {
   const student = await createStudent(req.body);
@@ -19,7 +20,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getStudents(req.query);
+  const data = await getStudents(studentListQuery(req.query));
 
   return sendSuccess(res, { data });
 });

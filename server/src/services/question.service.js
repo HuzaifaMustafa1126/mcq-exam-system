@@ -139,9 +139,9 @@ export const getQuestions = async ({ page, limit, search, subjectId, difficulty,
   const countSql = `SELECT COUNT(*) AS total FROM questions
     INNER JOIN subjects ON subjects.id = questions.subject_id ${whereClause}`;
   const [questionsResult, totalResult] = await Promise.all([
-    pool.execute(
-      `${questionSelect} ${whereClause} ORDER BY questions.id DESC LIMIT ? OFFSET ?`,
-      [...values, limit, offset]
+    pool.query(
+      `${questionSelect} ${whereClause} ORDER BY questions.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      values
     ),
     pool.execute(countSql, values),
   ]);

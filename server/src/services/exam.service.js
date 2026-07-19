@@ -127,9 +127,9 @@ export const getExams = async ({ page, limit, search, subjectId, status }, user)
   const countSql = `SELECT COUNT(*) AS total FROM exams
     INNER JOIN subjects ON subjects.id = exams.subject_id ${whereClause}`;
   const [examsResult, totalResult] = await Promise.all([
-    pool.execute(
-      `${examSelect} ${whereClause} ORDER BY exams.id DESC LIMIT ? OFFSET ?`,
-      [...values, limit, offset]
+    pool.query(
+      `${examSelect} ${whereClause} ORDER BY exams.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      values
     ),
     pool.execute(countSql, values),
   ]);

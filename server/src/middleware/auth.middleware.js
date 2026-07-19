@@ -1,8 +1,10 @@
 import { HTTP_STATUS } from '../constants/httpStatus.js';
+import pool from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { verifyToken } from '../utils/jwt.js';
 
-export const authenticate = (req, _res, next) => {
+export const authenticate = async (req, _res, next) => {
+  let payload;
   try {
     const authHeader = req.headers.authorization;
 
@@ -26,7 +28,7 @@ export const authenticate = (req, _res, next) => {
       );
     }
 
-    const payload = verifyToken(token);
+    payload = verifyToken(token);
 
     if (!payload) {
       return next(
@@ -37,14 +39,6 @@ export const authenticate = (req, _res, next) => {
       );
     }
 
-    req.user = {
-      id: Number(payload.sub),
-      name: payload.name,
-      email: payload.email,
-      role: payload.role,
-    };
-
-    return next();
   } catch (error) {
     return next(
       new AppError(
@@ -52,6 +46,21 @@ export const authenticate = (req, _res, next) => {
         HTTP_STATUS.UNAUTHORIZED
       )
     );
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id, name, email, role, status FROM users WHERE id = ? LIMIT 1',
+      [Number(payload.sub)]
+    );
+    const user = rows[0];
+    if (!user || user.status !== 'active' || user.role !== payload.role) {
+      return next(new AppError('Your session is no longer valid. Please sign in again.', HTTP_STATUS.UNAUTHORIZED));
+    }
+    req.user = { id: Number(user.id), name: user.name, email: user.email, role: user.role };
+    return next();
+  } catch (error) {
+    return next(error);
   }
 };
 

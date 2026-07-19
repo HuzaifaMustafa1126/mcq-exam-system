@@ -73,9 +73,9 @@ export const getSubjects = async ({ page, limit, search }) => {
   const searchValues = searchTerm ? [searchTerm, searchTerm, searchTerm] : [];
 
   const [subjectsResult, totalResult] = await Promise.all([
-    pool.execute(
-      `${subjectSelect} ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
-      [...searchValues, limit, offset]
+    pool.query(
+      `${subjectSelect} ${whereClause} ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      searchValues
     ),
     pool.execute(`SELECT COUNT(*) AS total FROM subjects ${whereClause}`, searchValues),
   ]);

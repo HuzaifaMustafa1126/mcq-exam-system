@@ -1,9 +1,10 @@
 import asyncHandler from '../helpers/asyncHandler.js';
 import { getResultDetails, getResults } from '../services/result.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { resultListQuery } from '../utils/query.js';
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getResults(req.user, req.query);
+  const data = await getResults(req.user, resultListQuery(req.query));
   return sendSuccess(res, { data });
 });
 

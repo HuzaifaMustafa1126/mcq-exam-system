@@ -118,7 +118,7 @@ export const getStudents = async ({ page, limit, search, semester, section, stat
     filters.push('(users.name LIKE ? OR users.email LIKE ? OR students.student_number LIKE ?)');
     values.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
-  if (semester !== undefined) {
+  if (Number.isInteger(semester)) {
     filters.push('students.semester = ?');
     values.push(semester);
   }
@@ -133,9 +133,9 @@ export const getStudents = async ({ page, limit, search, semester, section, stat
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
 
   const [studentsResult, totalResult] = await Promise.all([
-    pool.execute(
-      `${studentSelect} ${whereClause} ORDER BY students.id DESC LIMIT ? OFFSET ?`,
-      [...values, limit, offset]
+    pool.query(
+      `${studentSelect} ${whereClause} ORDER BY students.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      values
     ),
     pool.execute(
       `SELECT COUNT(*) AS total FROM students INNER JOIN users ON users.id = students.user_id ${whereClause}`,

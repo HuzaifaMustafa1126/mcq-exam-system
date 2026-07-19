@@ -113,9 +113,9 @@ export const getTeachers = async ({ page, limit, search }) => {
   const searchValues = searchTerm ? [searchTerm, searchTerm, searchTerm] : [];
 
   const [teachersResult, totalResult] = await Promise.all([
-    pool.execute(
-      `${teacherSelect} ${whereClause} ORDER BY teachers.id DESC LIMIT ? OFFSET ?`,
-      [...searchValues, limit, offset]
+    pool.query(
+      `${teacherSelect} ${whereClause} ORDER BY teachers.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      searchValues
     ),
     pool.execute(
       `SELECT COUNT(*) AS total FROM teachers INNER JOIN users ON users.id = teachers.user_id ${whereClause}`,

@@ -17,15 +17,15 @@ import {
 
 const router = Router();
 
-router.use(authenticate, authorize('admin'));
+router.use(authenticate);
 
-router.route('/')
-  .post(createSubjectValidation, create)
-  .get(listSubjectsValidation, getAll);
+// Teachers need read access to subjects when authoring questions and exams, but
+// subject administration remains an admin-only responsibility.
+router.get('/', authorize('admin', 'teacher'), listSubjectsValidation, getAll);
+router.post('/', authorize('admin'), createSubjectValidation, create);
 
-router.route('/:id')
-  .get(subjectIdParamValidation, getById)
-  .put(updateSubjectValidation, update)
-  .delete(subjectIdParamValidation, remove);
+router.get('/:id', authorize('admin', 'teacher'), subjectIdParamValidation, getById);
+router.put('/:id', authorize('admin'), updateSubjectValidation, update);
+router.delete('/:id', authorize('admin'), subjectIdParamValidation, remove);
 
 export default router;

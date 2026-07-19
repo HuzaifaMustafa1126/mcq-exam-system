@@ -8,6 +8,7 @@ import {
   updateSubject,
 } from '../services/subject.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { subjectListQuery } from '../utils/query.js';
 
 export const create = asyncHandler(async (req, res) => {
   const subject = await createSubject(req.body);
@@ -19,7 +20,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getAll = asyncHandler(async (req, res) => {
-  const data = await getSubjects(req.query);
+  const data = await getSubjects(subjectListQuery(req.query));
 
   return sendSuccess(res, { data });
 });
