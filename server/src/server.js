@@ -1,7 +1,7 @@
 import http from 'node:http';
-import app from './src/app.js';
-import { closeDatabasePool, testDatabaseConnection } from './src/config/db.js';
-import env from './src/config/env.js';
+import app from './app.js';
+import { closeDatabasePool, testDatabaseConnection } from './config/db.js';
+import env from './config/env.js';
 
 
 

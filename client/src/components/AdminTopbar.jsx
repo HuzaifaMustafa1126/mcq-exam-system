@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-export default function AdminTopbar() {
+export default function AdminTopbar({ onMenu }) {
   const [profileOpen, setProfileOpen] = useState(false)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -15,7 +15,7 @@ export default function AdminTopbar() {
 
   return <header className="sticky top-0 z-20 border-b border-white/10 bg-zinc-950/75 px-5 py-4 backdrop-blur-xl md:px-8">
     <div className="mx-auto flex max-w-7xl items-center gap-3">
-      <button className="rounded-xl p-2 text-zinc-300 hover:bg-white/5 lg:hidden" aria-label="Open navigation"><Menu size={21} /></button>
+      <button type="button" onClick={onMenu} className="rounded-xl p-2 text-zinc-300 hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-cyan-400 lg:hidden" aria-label="Open navigation"><Menu size={21} /></button>
       <div className="relative hidden max-w-md flex-1 sm:block">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
         <input aria-label="Search" placeholder="Search students, exams, or questions..." className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-400/10" />
