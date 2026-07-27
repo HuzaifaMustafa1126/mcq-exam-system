@@ -35,7 +35,7 @@ A modern, responsive, production-ready examination platform.
 
 ## 📸 Screenshots
 
-![Dashboard](images/dashboard.png)
+![Dashboard](/dashboard.png)
 
 ## 🚀 Installation
 
