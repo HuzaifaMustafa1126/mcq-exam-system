@@ -1,6 +1,6 @@
-import pool from '../config/db.js';
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import AppError from '../utils/AppError.js';
+import pool from "../config/db.js";
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import AppError from "../utils/AppError.js";
 
 const resultSelect = `
   SELECT
@@ -46,51 +46,103 @@ const toResult = (result) => ({
 });
 
 const getProfileId = async (role, userId) => {
-  const table = role === 'student' ? 'students' : 'teachers';
-  const [rows] = await pool.execute(`SELECT id FROM ${table} WHERE user_id = ? LIMIT 1`, [userId]);
+  const table = role === "student" ? "students" : "teachers";
+  const [rows] = await pool.execute(
+    `SELECT id FROM ${table} WHERE user_id = ? LIMIT 1`,
+    [userId],
+  );
 
   if (!rows[0]) {
-    throw new AppError(`${role === 'student' ? 'Student' : 'Teacher'} profile not found`, HTTP_STATUS.FORBIDDEN);
+    throw new AppError(
+      `${role === "student" ? "Student" : "Teacher"} profile not found`,
+      HTTP_STATUS.FORBIDDEN,
+    );
   }
 
   return rows[0].id;
 };
 
 const getScope = async (user) => {
-  if (user.role === 'admin') return { clause: '', values: [] };
+  if (user.role === "admin") return { clause: "", values: [] };
 
-  if (user.role === 'student') {
-    const studentId = await getProfileId('student', user.id);
-    return { clause: 'WHERE student_exams.student_id = ?', values: [studentId] };
+  if (user.role === "student") {
+    const studentId = await getProfileId("student", user.id);
+    return {
+      clause: "WHERE student_exams.student_id = ?",
+      values: [studentId],
+    };
   }
 
-  if (user.role === 'teacher') {
-    const teacherId = await getProfileId('teacher', user.id);
-    return { clause: 'WHERE exams.created_by_teacher_id = ?', values: [teacherId] };
+  if (user.role === "teacher") {
+    const teacherId = await getProfileId("teacher", user.id);
+    return {
+      clause: "WHERE exams.created_by_teacher_id = ?",
+      values: [teacherId],
+    };
   }
 
-  throw new AppError('You do not have permission to access results', HTTP_STATUS.FORBIDDEN);
+  throw new AppError(
+    "You do not have permission to access results",
+    HTTP_STATUS.FORBIDDEN,
+  );
 };
 
-export const getResults = async (user, { page = 1, limit = 20, search, studentId, subjectId, examId, dateFrom, dateTo, status } = {}) => {
+export const getResults = async (
+  user,
+  {
+    page = 1,
+    limit = 20,
+    search,
+    studentId,
+    subjectId,
+    examId,
+    dateFrom,
+    dateTo,
+    status,
+  } = {},
+) => {
   const scope = await getScope(user);
-  const conditions = scope.clause ? [scope.clause.replace(/^WHERE\s+/, '')] : [];
+  const conditions = scope.clause
+    ? [scope.clause.replace(/^WHERE\s+/, "")]
+    : [];
   const values = [...scope.values];
   if (search) {
-    conditions.push('(users.name LIKE ? OR students.student_number LIKE ? OR exams.title LIKE ?)');
+    conditions.push(
+      "(users.name LIKE ? OR students.student_number LIKE ? OR exams.title LIKE ?)",
+    );
     values.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
-  if (studentId) { conditions.push('students.id = ?'); values.push(studentId); }
-  if (subjectId) { conditions.push('exams.subject_id = ?'); values.push(subjectId); }
-  if (examId) { conditions.push('exams.id = ?'); values.push(examId); }
-  if (dateFrom) { conditions.push('DATE(student_exams.submitted_at) >= ?'); values.push(dateFrom); }
-  if (dateTo) { conditions.push('DATE(student_exams.submitted_at) <= ?'); values.push(dateTo); }
-  if (status) { conditions.push('results.status = ?'); values.push(status); }
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  if (studentId) {
+    conditions.push("students.id = ?");
+    values.push(studentId);
+  }
+  if (subjectId) {
+    conditions.push("exams.subject_id = ?");
+    values.push(subjectId);
+  }
+  if (examId) {
+    conditions.push("exams.id = ?");
+    values.push(examId);
+  }
+  if (dateFrom) {
+    conditions.push("DATE(student_exams.submitted_at) >= ?");
+    values.push(dateFrom);
+  }
+  if (dateTo) {
+    conditions.push("DATE(student_exams.submitted_at) <= ?");
+    values.push(dateTo);
+  }
+  if (status) {
+    conditions.push("results.status = ?");
+    values.push(status);
+  }
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
+    : "";
   const offset = (page - 1) * limit;
   const [results] = await pool.query(
     `${resultSelect} ${whereClause} ORDER BY student_exams.submitted_at DESC, student_exams.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-    values
+    values,
   );
   const countSql = `SELECT COUNT(*) AS total, COALESCE(AVG(results.percentage), 0) AS averagePercentage,
     SUM(results.status = 'pass') AS passed, SUM(results.status = 'fail') AS failed
@@ -103,19 +155,26 @@ export const getResults = async (user, { page = 1, limit = 20, search, studentId
   return {
     results: results.map(toResult),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    summary: { total, passed: Number(summary.passed || 0), failed: Number(summary.failed || 0), averagePercentage: Number(Number(summary.averagePercentage || 0).toFixed(2)) },
+    summary: {
+      total,
+      passed: Number(summary.passed || 0),
+      failed: Number(summary.failed || 0),
+      averagePercentage: Number(
+        Number(summary.averagePercentage || 0).toFixed(2),
+      ),
+    },
   };
 };
 
 export const getResultByAttemptId = async (user, attemptId) => {
   const scope = await getScope(user);
   const [results] = await pool.execute(
-    `${resultSelect} ${scope.clause ? `${scope.clause} AND` : 'WHERE'} student_exams.id = ? LIMIT 1`,
-    [...scope.values, attemptId]
+    `${resultSelect} ${scope.clause ? `${scope.clause} AND` : "WHERE"} student_exams.id = ? LIMIT 1`,
+    [...scope.values, attemptId],
   );
 
   if (!results[0]) {
-    throw new AppError('Result not found', HTTP_STATUS.NOT_FOUND);
+    throw new AppError("Result not found", HTTP_STATUS.NOT_FOUND);
   }
 
   return toResult(results[0]);
@@ -133,7 +192,14 @@ export const getResultDetails = async (user, attemptId) => {
      LEFT JOIN question_options AS selected ON selected.id = student_answers.selected_option_id
      LEFT JOIN question_options AS correct ON correct.question_id = questions.id AND correct.is_correct = TRUE
      WHERE student_answers.student_exam_id = ? ORDER BY exam_questions.display_order ASC`,
-    [result.attemptId]
+    [result.attemptId],
   );
-  return { ...result, answers: answers.map((answer) => ({ ...answer, marksAwarded: Number(answer.marksAwarded), isCorrect: answer.isCorrect === null ? null : Boolean(answer.isCorrect) })) };
+  return {
+    ...result,
+    answers: answers.map((answer) => ({
+      ...answer,
+      marksAwarded: Number(answer.marksAwarded),
+      isCorrect: answer.isCorrect === null ? null : Boolean(answer.isCorrect),
+    })),
+  };
 };

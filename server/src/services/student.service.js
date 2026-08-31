@@ -1,7 +1,7 @@
-import pool from '../config/db.js';
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import AppError from '../utils/AppError.js';
-import { hashPassword } from '../utils/password.js';
+import pool from "../config/db.js";
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import AppError from "../utils/AppError.js";
+import { hashPassword } from "../utils/password.js";
 
 const studentSelect = `
   SELECT
@@ -12,7 +12,6 @@ const studentSelect = `
     users.status,
     students.student_number AS rollNumber,
     students.registration_number AS registrationNumber,
-    students.semester,
     students.section,
     students.\`session\` AS session,
     students.phone,
@@ -23,48 +22,70 @@ const studentSelect = `
 `;
 
 const duplicateError = (field) =>
-  new AppError(`A student with this ${field} already exists`, HTTP_STATUS.CONFLICT);
+  new AppError(
+    `A student with this ${field} already exists`,
+    HTTP_STATUS.CONFLICT,
+  );
 
-const getStudentByIdWithExecutor = async (executor, id, { lock = false } = {}) => {
+const getStudentByIdWithExecutor = async (
+  executor,
+  id,
+  { lock = false } = {},
+) => {
   const [rows] = await executor.execute(
-    `${studentSelect} WHERE students.id = ?${lock ? ' FOR UPDATE' : ''}`,
-    [id]
+    `${studentSelect} WHERE students.id = ?${lock ? " FOR UPDATE" : ""}`,
+    [id],
   );
 
   if (!rows[0]) {
-    throw new AppError('Student not found', HTTP_STATUS.NOT_FOUND);
+    throw new AppError("Student not found", HTTP_STATUS.NOT_FOUND);
   }
 
   return rows[0];
 };
 
-const ensureEmailAvailable = async (connection, email, excludedUserId = null) => {
+const ensureEmailAvailable = async (
+  connection,
+  email,
+  excludedUserId = null,
+) => {
   const sql = excludedUserId
-    ? 'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1 FOR UPDATE'
-    : 'SELECT id FROM users WHERE email = ? LIMIT 1 FOR UPDATE';
+    ? "SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1 FOR UPDATE"
+    : "SELECT id FROM users WHERE email = ? LIMIT 1 FOR UPDATE";
   const values = excludedUserId ? [email, excludedUserId] : [email];
   const [rows] = await connection.execute(sql, values);
 
-  if (rows.length > 0) throw duplicateError('email address');
+  if (rows.length > 0) throw duplicateError("email address");
 };
 
-const ensureRollNumberAvailable = async (connection, rollNumber, excludedStudentId = null) => {
+const ensureRollNumberAvailable = async (
+  connection,
+  rollNumber,
+  excludedStudentId = null,
+) => {
   const sql = excludedStudentId
-    ? 'SELECT id FROM students WHERE student_number = ? AND id != ? LIMIT 1 FOR UPDATE'
-    : 'SELECT id FROM students WHERE student_number = ? LIMIT 1 FOR UPDATE';
-  const values = excludedStudentId ? [rollNumber, excludedStudentId] : [rollNumber];
+    ? "SELECT id FROM students WHERE student_number = ? AND id != ? LIMIT 1 FOR UPDATE"
+    : "SELECT id FROM students WHERE student_number = ? LIMIT 1 FOR UPDATE";
+  const values = excludedStudentId
+    ? [rollNumber, excludedStudentId]
+    : [rollNumber];
   const [rows] = await connection.execute(sql, values);
 
-  if (rows.length > 0) throw duplicateError('roll number');
+  if (rows.length > 0) throw duplicateError("roll number");
 };
 
 const translateDuplicateKeyError = (error) => {
-  if (error.code !== 'ER_DUP_ENTRY') throw error;
+  if (error.code !== "ER_DUP_ENTRY") throw error;
 
-  if (error.message.includes('uq_users_email')) throw duplicateError('email address');
-  if (error.message.includes('uq_students_student_number')) throw duplicateError('roll number');
+  if (error.message.includes("uq_users_email"))
+    throw duplicateError("email address");
+  if (error.message.includes("uq_students_student_number"))
+    throw duplicateError("roll number");
 
-  throw new AppError('A student with these details already exists', HTTP_STATUS.CONFLICT);
+  throw new AppError(
+    "A student with these details already exists",
+    HTTP_STATUS.CONFLICT,
+  );
 };
 
 export const createStudent = async ({
@@ -73,11 +94,10 @@ export const createStudent = async ({
   password,
   rollNumber,
   registrationNumber,
-  semester,
   section,
   session,
   phone,
-  status = 'active',
+  status = "active",
 }) => {
   const connection = await pool.getConnection();
 
@@ -88,17 +108,27 @@ export const createStudent = async ({
 
     const passwordHash = await hashPassword(password);
     const [userResult] = await connection.execute(
-      'INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)',
-      [name, email, passwordHash, 'student', status]
+      "INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)",
+      [name, email, passwordHash, "student", status],
     );
     const [studentResult] = await connection.execute(
       `INSERT INTO students
-        (user_id, student_number, registration_number, semester, section, \`session\`, phone)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userResult.insertId, rollNumber, registrationNumber, semester, section, session, phone]
+        (user_id, student_number, registration_number, section, \`session\`, phone)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        userResult.insertId,
+        rollNumber,
+        registrationNumber,
+        section,
+        session,
+        phone,
+      ],
     );
 
-    const student = await getStudentByIdWithExecutor(connection, studentResult.insertId);
+    const student = await getStudentByIdWithExecutor(
+      connection,
+      studentResult.insertId,
+    );
     await connection.commit();
 
     return student;
@@ -110,36 +140,35 @@ export const createStudent = async ({
   }
 };
 
-export const getStudents = async ({ page, limit, search, semester, section, status }) => {
+export const getStudents = async ({ page, limit, search, section, status }) => {
   const offset = (page - 1) * limit;
   const filters = [];
   const values = [];
   if (search) {
-    filters.push('(users.name LIKE ? OR users.email LIKE ? OR students.student_number LIKE ?)');
+    filters.push(
+      "(users.name LIKE ? OR users.email LIKE ? OR students.student_number LIKE ?)",
+    );
     values.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
-  if (Number.isInteger(semester)) {
-    filters.push('students.semester = ?');
-    values.push(semester);
-  }
   if (section) {
-    filters.push('students.section = ?');
+    filters.push("students.section = ?");
     values.push(section);
   }
   if (status) {
-    filters.push('users.status = ?');
+    filters.push("users.status = ?");
     values.push(status);
   }
-  const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+  const whereClause =
+    filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
 
   const [studentsResult, totalResult] = await Promise.all([
     pool.query(
       `${studentSelect} ${whereClause} ORDER BY students.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-      values
+      values,
     ),
     pool.execute(
       `SELECT COUNT(*) AS total FROM students INNER JOIN users ON users.id = students.user_id ${whereClause}`,
-      values
+      values,
     ),
   ]);
 
@@ -165,10 +194,16 @@ export const updateStudent = async (id, updates) => {
 
   try {
     await connection.beginTransaction();
-    const currentStudent = await getStudentByIdWithExecutor(connection, id, { lock: true });
+    const currentStudent = await getStudentByIdWithExecutor(connection, id, {
+      lock: true,
+    });
 
     if (updates.email !== undefined) {
-      await ensureEmailAvailable(connection, updates.email, currentStudent.userId);
+      await ensureEmailAvailable(
+        connection,
+        updates.email,
+        currentStudent.userId,
+      );
     }
     if (updates.rollNumber !== undefined) {
       await ensureRollNumberAvailable(connection, updates.rollNumber, id);
@@ -176,32 +211,31 @@ export const updateStudent = async (id, updates) => {
 
     const userFields = [];
     const userValues = [];
-    for (const field of ['name', 'email', 'status']) {
+    for (const field of ["name", "email", "status"]) {
       if (updates[field] !== undefined) {
         userFields.push(`${field} = ?`);
         userValues.push(updates[field]);
       }
     }
     if (updates.password !== undefined) {
-      userFields.push('password = ?');
+      userFields.push("password = ?");
       userValues.push(await hashPassword(updates.password));
     }
     if (userFields.length > 0) {
       await connection.execute(
-        `UPDATE users SET ${userFields.join(', ')} WHERE id = ?`,
-        [...userValues, currentStudent.userId]
+        `UPDATE users SET ${userFields.join(", ")} WHERE id = ?`,
+        [...userValues, currentStudent.userId],
       );
     }
 
     const studentFields = [];
     const studentValues = [];
     const studentColumnByField = {
-      rollNumber: 'student_number',
-      registrationNumber: 'registration_number',
-      semester: 'semester',
-      section: 'section',
-      session: '`session`',
-      phone: 'phone',
+      rollNumber: "student_number",
+      registrationNumber: "registration_number",
+      section: "section",
+      session: "`session`",
+      phone: "phone",
     };
     for (const [field, column] of Object.entries(studentColumnByField)) {
       if (updates[field] !== undefined) {
@@ -211,8 +245,8 @@ export const updateStudent = async (id, updates) => {
     }
     if (studentFields.length > 0) {
       await connection.execute(
-        `UPDATE students SET ${studentFields.join(', ')} WHERE id = ?`,
-        [...studentValues, id]
+        `UPDATE students SET ${studentFields.join(", ")} WHERE id = ?`,
+        [...studentValues, id],
       );
     }
 
@@ -233,8 +267,12 @@ export const deleteStudent = async (id) => {
 
   try {
     await connection.beginTransaction();
-    const student = await getStudentByIdWithExecutor(connection, id, { lock: true });
-    await connection.execute('DELETE FROM users WHERE id = ?', [student.userId]);
+    const student = await getStudentByIdWithExecutor(connection, id, {
+      lock: true,
+    });
+    await connection.execute("DELETE FROM users WHERE id = ?", [
+      student.userId,
+    ]);
     await connection.commit();
   } catch (error) {
     await connection.rollback();

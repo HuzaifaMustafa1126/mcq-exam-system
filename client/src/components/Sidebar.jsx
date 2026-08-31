@@ -4,7 +4,6 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
-  Settings,
   Users,
   HelpCircle,
   X,
@@ -32,12 +31,10 @@ const adminItems = [
   { to: "/admin/exams", label: "Exams", icon: BookOpen },
   { to: "/admin/questions", label: "Questions", icon: HelpCircle },
   { to: "/admin/results", label: "Results", icon: FileText },
-  
 ];
 export default function Sidebar({
   admin = false,
   teacher = false,
-  fixed = false,
   mobileOpen = false,
   onClose,
 }) {
@@ -52,18 +49,27 @@ export default function Sidebar({
         onClick={onClose}
       />
       <aside
-        className={`glass hidden w-64 shrink-0 flex-col border-y-0 border-l-0 p-5 lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:z-30`}
+        className={`student-sidebar fixed inset-y-0 left-0 z-40 flex w-[260px] shrink-0 flex-col p-5 transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
         <div className="mb-10 flex items-center justify-between">
           <NavLink
             to={home}
             onClick={onClose}
-            className="flex items-center gap-2 text-xl font-bold"
+            className="flex items-center gap-3 text-xl font-bold"
           >
-            <span className="grid size-9 place-items-center rounded-xl bg-linear-to-br from-violet-500 to-cyan-400">
-              E
-            </span>
-            Examora
+            <>
+              <img
+                src="/logo.png"
+                alt="Hussain Forces Academy crest"
+                className="size-12 object-contain"
+              />
+              <span className="leading-tight">
+                <span className="block text-base">HUSSAIN FORCES</span>
+                <span className="block text-xs font-medium tracking-wider text-[#c9b86a]">
+                  CRADLE OF LEADERS
+                </span>
+              </span>
+            </>
           </NavLink>
           <button
             type="button"
@@ -81,7 +87,7 @@ export default function Sidebar({
               to={to}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${isActive ? "bg-linear-to-r from-violet-500/25 to-cyan-400/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`
+                `flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${isActive ? "student-nav-active" : "student-nav-item"}`
               }
             >
               <Icon size={18} />
@@ -90,7 +96,7 @@ export default function Sidebar({
           ))}
         </div>
         <div className="mt-auto">
-          <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-400">
+          <div className="student-user-card mb-4 rounded-xl p-3 text-xs">
             <p className="font-semibold text-white">
               {user?.name || "Exam learner"}
             </p>
@@ -103,7 +109,7 @@ export default function Sidebar({
               navigate("/login");
               onClose?.();
             }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-zinc-400 hover:bg-rose-500/10 hover:text-rose-300"
+            className="student-logout flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm"
           >
             <LogOut size={18} />
             Logout

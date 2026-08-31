@@ -1,13 +1,13 @@
-import jwt from 'jsonwebtoken';
-import env from '../config/env.js';
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import AppError from './AppError.js';
+import jwt from "jsonwebtoken";
+import env from "../config/env.js";
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import AppError from "./AppError.js";
 
 const getJwtSecret = () => {
   if (!env.jwt?.secret) {
     throw new AppError(
-      'JWT_SECRET is not configured',
-      HTTP_STATUS.INTERNAL_SERVER_ERROR
+      "JWT_SECRET is not configured",
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
     );
   }
 
@@ -25,7 +25,7 @@ export const generateToken = (user) => {
     {
       subject: String(user.id),
       expiresIn: env.jwt.expiresIn,
-    }
+    },
   );
 };
 

@@ -1,8 +1,11 @@
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import asyncHandler from '../helpers/asyncHandler.js';
-import { authenticateUser, updateAuthenticatedUser } from '../services/auth.service.js';
-import { generateToken } from '../utils/jwt.js';
-import { sendSuccess } from '../utils/response.js';
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import asyncHandler from "../helpers/asyncHandler.js";
+import {
+  authenticateUser,
+  updateAuthenticatedUser,
+} from "../services/auth.service.js";
+import { generateToken } from "../utils/jwt.js";
+import { sendSuccess } from "../utils/response.js";
 
 export const login = asyncHandler(async (req, res) => {
   const user = await authenticateUser(req.body);

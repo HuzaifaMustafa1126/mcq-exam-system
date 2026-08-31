@@ -1,14 +1,14 @@
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import asyncHandler from '../helpers/asyncHandler.js';
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import asyncHandler from "../helpers/asyncHandler.js";
 import {
   createTeacher,
   deleteTeacher,
   getTeacherById,
   getTeachers,
   updateTeacher,
-} from '../services/teacher.service.js';
-import { sendSuccess } from '../utils/response.js';
-import { teacherListQuery } from '../utils/query.js';
+} from "../services/teacher.service.js";
+import { sendSuccess } from "../utils/response.js";
+import { teacherListQuery } from "../utils/query.js";
 
 export const create = asyncHandler(async (req, res) => {
   const teacher = await createTeacher(req.body);
@@ -41,6 +41,6 @@ export const remove = asyncHandler(async (req, res) => {
   await deleteTeacher(req.params.id);
 
   return sendSuccess(res, {
-    data: { message: 'Teacher deleted successfully' },
+    data: { message: "Teacher deleted successfully" },
   });
 });

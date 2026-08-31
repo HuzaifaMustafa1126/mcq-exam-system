@@ -1,6 +1,6 @@
-import pool from '../config/db.js';
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import AppError from '../utils/AppError.js';
+import pool from "../config/db.js";
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import AppError from "../utils/AppError.js";
 
 const subjectSelect = `
   SELECT
@@ -16,13 +16,13 @@ const subjectSelect = `
 `;
 
 const duplicateCodeError = () =>
-  new AppError('A subject with this code already exists', HTTP_STATUS.CONFLICT);
+  new AppError("A subject with this code already exists", HTTP_STATUS.CONFLICT);
 
 const getSubjectByIdWithExecutor = async (executor, id) => {
   const [rows] = await executor.execute(`${subjectSelect} WHERE id = ?`, [id]);
 
   if (!rows[0]) {
-    throw new AppError('Subject not found', HTTP_STATUS.NOT_FOUND);
+    throw new AppError("Subject not found", HTTP_STATUS.NOT_FOUND);
   }
 
   return rows[0];
@@ -30,8 +30,8 @@ const getSubjectByIdWithExecutor = async (executor, id) => {
 
 const ensureCodeAvailable = async (code, excludedId = null) => {
   const sql = excludedId
-    ? 'SELECT id FROM subjects WHERE code = ? AND id != ? LIMIT 1'
-    : 'SELECT id FROM subjects WHERE code = ? LIMIT 1';
+    ? "SELECT id FROM subjects WHERE code = ? AND id != ? LIMIT 1"
+    : "SELECT id FROM subjects WHERE code = ? LIMIT 1";
   const values = excludedId ? [code, excludedId] : [code];
   const [rows] = await pool.execute(sql, values);
 
@@ -39,25 +39,30 @@ const ensureCodeAvailable = async (code, excludedId = null) => {
 };
 
 const translateDatabaseError = (error) => {
-  if (error.code === 'ER_DUP_ENTRY') throw duplicateCodeError();
+  if (error.code === "ER_DUP_ENTRY") throw duplicateCodeError();
 
-  if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+  if (error.code === "ER_ROW_IS_REFERENCED_2") {
     throw new AppError(
-      'Subject cannot be deleted while it is used by exams or questions',
-      HTTP_STATUS.CONFLICT
+      "Subject cannot be deleted while it is used by exams or questions",
+      HTTP_STATUS.CONFLICT,
     );
   }
 
   throw error;
 };
 
-export const createSubject = async ({ name, code, description, status = 'active' }) => {
+export const createSubject = async ({
+  name,
+  code,
+  description,
+  status = "active",
+}) => {
   await ensureCodeAvailable(code);
 
   try {
     const [result] = await pool.execute(
-      'INSERT INTO subjects (name, code, description, status) VALUES (?, ?, ?, ?)',
-      [name, code, description ?? null, status]
+      "INSERT INTO subjects (name, code, description, status) VALUES (?, ?, ?, ?)",
+      [name, code, description ?? null, status],
     );
 
     return await getSubjectByIdWithExecutor(pool, result.insertId);
@@ -69,15 +74,20 @@ export const createSubject = async ({ name, code, description, status = 'active'
 export const getSubjects = async ({ page, limit, search }) => {
   const offset = (page - 1) * limit;
   const searchTerm = search ? `%${search}%` : null;
-  const whereClause = searchTerm ? 'WHERE name LIKE ? OR code LIKE ? OR description LIKE ?' : '';
+  const whereClause = searchTerm
+    ? "WHERE name LIKE ? OR code LIKE ? OR description LIKE ?"
+    : "";
   const searchValues = searchTerm ? [searchTerm, searchTerm, searchTerm] : [];
 
   const [subjectsResult, totalResult] = await Promise.all([
     pool.query(
       `${subjectSelect} ${whereClause} ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-      searchValues
+      searchValues,
     ),
-    pool.execute(`SELECT COUNT(*) AS total FROM subjects ${whereClause}`, searchValues),
+    pool.execute(
+      `SELECT COUNT(*) AS total FROM subjects ${whereClause}`,
+      searchValues,
+    ),
   ]);
   const [subjects] = subjectsResult;
   const [totalRows] = totalResult;
@@ -104,24 +114,26 @@ export const updateSubject = async (id, updates) => {
   }
 
   const columnByField = {
-    name: 'name',
-    code: 'code',
-    description: 'description',
-    status: 'status',
+    name: "name",
+    code: "code",
+    description: "description",
+    status: "status",
   };
   const fields = [];
   const values = [];
   for (const [field, column] of Object.entries(columnByField)) {
     if (updates[field] !== undefined) {
       fields.push(`${column} = ?`);
-      values.push(field === 'description' ? updates[field] || null : updates[field]);
+      values.push(
+        field === "description" ? updates[field] || null : updates[field],
+      );
     }
   }
 
   try {
     await pool.execute(
-      `UPDATE subjects SET ${fields.join(', ')} WHERE id = ?`,
-      [...values, id]
+      `UPDATE subjects SET ${fields.join(", ")} WHERE id = ?`,
+      [...values, id],
     );
 
     return await getSubjectById(id);
@@ -134,7 +146,7 @@ export const deleteSubject = async (id) => {
   await getSubjectById(id);
 
   try {
-    await pool.execute('DELETE FROM subjects WHERE id = ?', [id]);
+    await pool.execute("DELETE FROM subjects WHERE id = ?", [id]);
   } catch (error) {
     translateDatabaseError(error);
   }

@@ -1,6 +1,23 @@
-import { Outlet } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import AdminTopbar from "../components/AdminTopbar";
+import Sidebar from "../components/Sidebar";
 
 export default function TeacherLayout() {
-  return <div className="aurora min-h-screen"><Sidebar teacher fixed /><div className="min-w-0 lg:ml-64"><main className="p-5 md:p-8"><Outlet /></main></div></div>
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  return (
+    <div className="academy-portal min-h-screen">
+      <Sidebar
+        teacher
+        mobileOpen={navigationOpen}
+        onClose={() => setNavigationOpen(false)}
+      />
+      <div className="academy-main min-w-0">
+        <AdminTopbar onMenu={() => setNavigationOpen(true)} />
+        <main className="min-w-0">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
 }

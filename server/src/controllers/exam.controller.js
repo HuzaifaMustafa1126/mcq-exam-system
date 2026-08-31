@@ -1,14 +1,14 @@
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import asyncHandler from '../helpers/asyncHandler.js';
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import asyncHandler from "../helpers/asyncHandler.js";
 import {
   createExam,
   deleteExam,
   getExamById,
   getExams,
   updateExam,
-} from '../services/exam.service.js';
-import { sendSuccess } from '../utils/response.js';
-import { examListQuery } from '../utils/query.js';
+} from "../services/exam.service.js";
+import { sendSuccess } from "../utils/response.js";
+import { examListQuery } from "../utils/query.js";
 
 export const create = asyncHandler(async (req, res) => {
   const exam = await createExam(req.body, req.user);
@@ -32,5 +32,5 @@ export const update = asyncHandler(async (req, res) => {
 
 export const remove = asyncHandler(async (req, res) => {
   await deleteExam(req.params.id, req.user);
-  return sendSuccess(res, { data: { message: 'Exam deleted successfully' } });
+  return sendSuccess(res, { data: { message: "Exam deleted successfully" } });
 });

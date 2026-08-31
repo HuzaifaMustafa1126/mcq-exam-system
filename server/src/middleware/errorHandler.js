@@ -1,4 +1,4 @@
-import { HTTP_STATUS } from '../constants/httpStatus.js';
+import { HTTP_STATUS } from "../constants/httpStatus.js";
 
 const errorHandler = (error, _req, res, _next) => {
   const statusCode = Number.isInteger(error.statusCode)
@@ -7,7 +7,7 @@ const errorHandler = (error, _req, res, _next) => {
 
   const response = {
     success: false,
-    message: error.isOperational ? error.message : 'Internal server error',
+    message: error.isOperational ? error.message : "Internal server error",
     errors: error.details || [],
   };
   if (!error.isOperational) console.error(error);

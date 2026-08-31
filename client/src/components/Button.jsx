@@ -13,8 +13,8 @@ export default function Button({
       className={clsx(
         "inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto",
         variant === "primary"
-          ? "bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-400 text-white shadow-lg shadow-violet-500/25"
-          : "border border-white/10 bg-white/5 text-white hover:bg-white/10",
+          ? "bg-[#064d2e] text-[#f5f5f0] shadow-lg shadow-black/20 hover:bg-[#1f5a3a]"
+          : "border border-[#f2e7a1]/20 bg-white/5 text-[#f5f5f0] hover:bg-[#1f5a3a]/35",
         className,
       )}
       {...props}

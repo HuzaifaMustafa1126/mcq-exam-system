@@ -5,16 +5,16 @@ import Sidebar from "../components/Sidebar";
 export default function AdminLayout() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   return (
-    <div className="aurora min-h-screen">
+    <div className="academy-portal min-h-screen">
       <Sidebar
         admin
         fixed
         mobileOpen={navigationOpen}
         onClose={() => setNavigationOpen(false)}
       />
-      <div className="min-w-0 lg:ml-64">
+      <div className="academy-main min-w-0">
         <AdminTopbar onMenu={() => setNavigationOpen(true)} />
-        <main className="min-w-0 p-5 md:p-8">
+        <main className="min-w-0">
           <Outlet />
         </main>
       </div>

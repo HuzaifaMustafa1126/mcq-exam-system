@@ -45,43 +45,43 @@ const statDefinitions = [
     "Total Students",
     "totalStudents",
     GraduationCap,
-    "from-violet-500/25 to-violet-500/5",
-    "text-violet-300",
+    "from-[#1f5a3a]/35 to-[#101c15]",
+    "text-[#f2e7a1]",
   ],
   [
     "Total Teachers",
     "totalTeachers",
     Users,
-    "from-cyan-500/25 to-cyan-500/5",
-    "text-cyan-300",
+    "from-[#1f5a3a]/35 to-[#101c15]",
+    "text-[#f2e7a1]",
   ],
   [
     "Total Subjects",
     "totalSubjects",
     Layers3,
-    "from-amber-500/25 to-amber-500/5",
-    "text-amber-300",
+    "from-[#273c2b]/55 to-[#101c15]",
+    "text-[#f2e7a1]",
   ],
   [
     "Total Questions",
     "totalQuestions",
     HelpCircle,
-    "from-fuchsia-500/25 to-fuchsia-500/5",
-    "text-fuchsia-300",
+    "from-[#273c2b]/55 to-[#101c15]",
+    "text-[#f2e7a1]",
   ],
   [
     "Total Exams",
     "totalExams",
     ClipboardList,
-    "from-blue-500/25 to-blue-500/5",
-    "text-blue-300",
+    "from-[#1f5a3a]/35 to-[#101c15]",
+    "text-[#f2e7a1]",
   ],
   [
     "Active Exams",
     "activeExams",
     BookOpen,
-    "from-emerald-500/25 to-emerald-500/5",
-    "text-emerald-300",
+    "from-[#1f5a3a]/35 to-[#101c15]",
+    "text-[#a9e4ba]",
   ],
 ];
 
@@ -158,10 +158,10 @@ export default function AdminDashboard() {
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold tracking-wide text-cyan-300">
-            ADMIN OVERVIEW
+            COMMAND DASHBOARD
           </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
-            Control center
+            Academy command center
           </h1>
           <p className="mt-2 text-sm text-zinc-400 sm:text-base">
             Monitor learners, assessments, and platform activity in one place.
@@ -228,8 +228,8 @@ export default function AdminDashboard() {
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.42} />
-                  <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#c9b86a" stopOpacity={0.42} />
+                  <stop offset="95%" stopColor="#c9b86a" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke="#ffffff12" vertical={false} />
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
                 type="monotone"
                 dataKey="students"
                 name="Students"
-                stroke="#22d3ee"
+                stroke="#c9b86a"
                 fill="url(#studentGradient)"
                 strokeWidth={3}
               />
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
                 {(data.examPerformance || []).map((item, index) => (
                   <Cell
                     key={`${item.label}-${index}`}
-                    fill={index % 2 ? "#a78bfa" : "#22d3ee"}
+                    fill={index % 2 ? "#1f5a3a" : "#c9b86a"}
                   />
                 ))}
               </Bar>
@@ -394,8 +394,8 @@ export default function AdminDashboard() {
 }
 
 const tooltipStyle = {
-  background: "#18181b",
-  border: "1px solid #3f3f46",
+  background: "#14231a",
+  border: "1px solid rgba(242,231,161,.14)",
   borderRadius: 12,
   color: "#f4f4f5",
 };

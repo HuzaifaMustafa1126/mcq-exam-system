@@ -1,9 +1,288 @@
 @import "tailwindcss";
 
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f8fafc; background: #09090b; font-synthesis: none; }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: #09090b; }
-button, input { font: inherit; }
-.aurora { background: radial-gradient(circle at 15% 20%, rgba(139,92,246,.24), transparent 28%), radial-gradient(circle at 85% 10%, rgba(6,182,212,.18), transparent 26%), #09090b; }
-.glass { background: rgba(24,24,27,.64); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 20px 60px rgba(0,0,0,.28); backdrop-filter: blur(18px); }
-.grid-bg { background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 42px 42px; }
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #f8fafc;
+  background: #09090b;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #09090b;
+}
+button,
+input {
+  font: inherit;
+}
+.aurora {
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgba(139, 92, 246, 0.24),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 85% 10%,
+      rgba(6, 182, 212, 0.18),
+      transparent 26%
+    ),
+    #09090b;
+}
+.glass {
+  background: rgba(24, 24, 27, 0.64);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+}
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+/* Student military academy theme */
+.student-portal {
+  color: #f5f5f0;
+  background:
+    radial-gradient(ellipse at 8% 3%, rgba(31, 90, 58, 0.22), transparent 34%),
+    radial-gradient(ellipse at 95% 5%, rgba(6, 77, 46, 0.18), transparent 30%),
+    radial-gradient(
+      ellipse at 82% 100%,
+      rgba(201, 184, 106, 0.06),
+      transparent 28%
+    ),
+    #08110d;
+}
+.student-main {
+  min-height: calc(100vh - 65px);
+  padding: 32px 40px;
+  overflow-x: hidden;
+}
+.student-main > * {
+  max-width: 1500px;
+}
+.student-menu {
+  display: none;
+}
+.student-sidebar {
+  border-right: 1px solid rgba(242, 231, 161, 0.14);
+  background: linear-gradient(180deg, #0d1712 0%, #08110d 100%);
+  box-shadow: 12px 0 38px rgba(0, 0, 0, 0.2);
+}
+.student-nav-item {
+  color: #a8b2aa;
+}
+.student-nav-item:hover {
+  color: #f5f5f0;
+  background: rgba(31, 90, 58, 0.28);
+}
+.student-nav-active {
+  color: #f5f5f0;
+  border-left: 2px solid #c9b86a;
+  background: #16442e;
+  box-shadow: inset 0 0 18px rgba(242, 231, 161, 0.04);
+}
+.student-user-card {
+  border: 1px solid rgba(242, 231, 161, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+  color: #a8b2aa;
+}
+.student-user-card p:first-child {
+  color: #f5f5f0;
+}
+.student-logout {
+  color: #a8b2aa;
+  border-top: 1px solid rgba(242, 231, 161, 0.12);
+}
+.student-logout:hover {
+  background: rgba(201, 74, 74, 0.12);
+  color: #f5f5f0;
+}
+.student-portal .glass {
+  background: #111c16;
+  border: 1px solid rgba(242, 231, 161, 0.14);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.2);
+  backdrop-filter: none;
+}
+.student-portal .military-button {
+  color: #08110d;
+  background: #f2e7a1;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+.student-portal .military-button:hover {
+  background: #fff2b8;
+}
+.student-portal .military-secondary {
+  color: #f5f5f0;
+  border-color: rgba(242, 231, 161, 0.23);
+  background: rgba(255, 255, 255, 0.035);
+}
+.student-portal .military-secondary:hover {
+  background: rgba(31, 90, 58, 0.35);
+}
+.student-portal input:focus {
+  border-color: #c9b86a !important;
+  box-shadow: 0 0 0 4px rgba(201, 184, 106, 0.1) !important;
+}
+@media (max-width: 1199px) {
+  .student-main {
+    padding: 24px;
+  }
+  .student-sidebar {
+    width: 260px;
+  }
+  .student-menu {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .student-main {
+    padding: 16px;
+  }
+  .student-main > * {
+    min-width: 0;
+  }
+}
+
+/* Shared academy application shell and component system */
+.academy-portal {
+  color: #f5f5f0;
+  background:
+    radial-gradient(ellipse at 5% 0%, rgba(31, 90, 58, 0.2), transparent 32%),
+    radial-gradient(
+      ellipse at 100% 100%,
+      rgba(201, 184, 106, 0.055),
+      transparent 28%
+    ),
+    #07100c;
+  min-height: 100vh;
+}
+.academy-main {
+  min-height: 100vh;
+  margin-left: 260px;
+  width: calc(100% - 260px);
+  overflow-x: hidden;
+}
+.academy-main main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+.academy-portal .glass,
+.academy-auth .glass {
+  background: #101c15;
+  border-color: rgba(242, 231, 161, 0.14);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
+  backdrop-filter: none;
+}
+.academy-portal .text-cyan-300,
+.academy-portal .text-violet-300,
+.academy-portal .text-fuchsia-300,
+.academy-portal .text-blue-300 {
+  color: #c9b86a;
+}
+.academy-portal .text-zinc-400,
+.academy-portal .text-zinc-500 {
+  color: #a8b2aa;
+}
+.academy-portal .border-white\/10,
+.academy-portal .border-white\/5 {
+  border-color: rgba(242, 231, 161, 0.14);
+}
+.academy-portal .bg-white\/5 {
+  background-color: rgba(255, 255, 255, 0.035);
+}
+.academy-portal button:focus-visible,
+.academy-auth button:focus-visible,
+.academy-portal a:focus-visible {
+  outline: 2px solid #f2e7a1;
+  outline-offset: 2px;
+}
+.academy-portal table thead {
+  background: #14231a;
+  color: #f2e7a1;
+}
+.academy-portal table tbody tr:hover {
+  background: rgba(31, 90, 58, 0.16);
+}
+.academy-portal select,
+.academy-portal textarea {
+  border-color: rgba(242, 231, 161, 0.14) !important;
+  background-color: #0b1610 !important;
+}
+.academy-portal select:focus,
+.academy-portal textarea:focus {
+  border-color: #c9b86a !important;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(201, 184, 106, 0.1);
+}
+.academy-portal input[type="date"] {
+  color-scheme: dark;
+  border-color: rgba(242, 231, 161, 0.14) !important;
+  background-color: #0b1610 !important;
+}
+.academy-portal [class*="bg-cyan"],
+.academy-portal [class*="bg-violet"],
+.academy-portal [class*="bg-fuchsia"],
+.academy-portal [class*="bg-blue"] {
+  background-color: rgba(31, 90, 58, 0.35);
+}
+.academy-portal [class*="hover:bg-cyan"]:hover {
+  background-color: rgba(31, 90, 58, 0.45);
+}
+.academy-modal .glass {
+  background: #101c15;
+  border: 1px solid rgba(242, 231, 161, 0.14);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+}
+.academy-modal input,
+.academy-modal select,
+.academy-modal textarea {
+  border-color: rgba(242, 231, 161, 0.14) !important;
+  background-color: #0b1610 !important;
+}
+.academy-modal input:focus,
+.academy-modal select:focus,
+.academy-modal textarea:focus {
+  border-color: #c9b86a !important;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(201, 184, 106, 0.1);
+}
+.academy-auth {
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(31, 90, 58, 0.3), transparent 38%),
+    radial-gradient(
+      ellipse at 90% 90%,
+      rgba(201, 184, 106, 0.08),
+      transparent 34%
+    ),
+    #07100c;
+}
+.academy-auth .glass {
+  width: min(100%, 460px);
+}
+@media (max-width: 1023px) {
+  .academy-main {
+    margin-left: 0;
+    width: 100%;
+  }
+  .academy-main main {
+    padding: 24px;
+  }
+}
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .academy-main main {
+    padding: 24px;
+  }
+}
+@media (max-width: 767px) {
+  .academy-main main {
+    padding: 16px;
+  }
+}

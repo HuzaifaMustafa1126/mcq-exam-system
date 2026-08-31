@@ -1,19 +1,19 @@
-import { Router } from 'express';
-import { API_PREFIX } from '../constants/app.js';
-import authRoutes from './auth.routes.js';
-import dashboardRoutes from './dashboard.routes.js';
-import { getStudentDashboard } from '../controllers/dashboard.controller.js';
-import authenticate from '../middleware/auth.middleware.js';
-import authorize from '../middleware/role.middleware.js';
-import examQuestionRoutes from './examQuestion.routes.js';
-import examRoutes from './exam.routes.js';
-import healthRoutes from './healthRoutes.js';
-import questionRoutes from './question.routes.js';
-import resultRoutes from './result.routes.js';
-import studentRoutes from './student.routes.js';
-import studentExamRoutes from './studentExam.routes.js';
-import subjectRoutes from './subject.routes.js';
-import teacherRoutes from './teacher.routes.js';
+import { Router } from "express";
+import { API_PREFIX } from "../constants/app.js";
+import authRoutes from "./auth.routes.js";
+import dashboardRoutes from "./dashboard.routes.js";
+import { getStudentDashboard } from "../controllers/dashboard.controller.js";
+import authenticate from "../middleware/auth.middleware.js";
+import authorize from "../middleware/role.middleware.js";
+import examQuestionRoutes from "./examQuestion.routes.js";
+import examRoutes from "./exam.routes.js";
+import healthRoutes from "./healthRoutes.js";
+import questionRoutes from "./question.routes.js";
+import resultRoutes from "./result.routes.js";
+import studentRoutes from "./student.routes.js";
+import studentExamRoutes from "./studentExam.routes.js";
+import subjectRoutes from "./subject.routes.js";
+import teacherRoutes from "./teacher.routes.js";
 
 const router = Router();
 
@@ -23,7 +23,12 @@ router.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
 router.use(`${API_PREFIX}/admin/dashboard`, dashboardRoutes);
 router.use(`${API_PREFIX}/teachers`, teacherRoutes);
 router.use(`${API_PREFIX}/students`, studentRoutes);
-router.get(`${API_PREFIX}/student/dashboard`, authenticate, authorize('student'), getStudentDashboard);
+router.get(
+  `${API_PREFIX}/student/dashboard`,
+  authenticate,
+  authorize("student"),
+  getStudentDashboard,
+);
 router.use(`${API_PREFIX}/student/exams`, studentExamRoutes);
 router.use(`${API_PREFIX}/student/results`, resultRoutes);
 router.use(`${API_PREFIX}/results`, resultRoutes);

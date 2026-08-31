@@ -51,7 +51,7 @@ export default function ExamAttemptPage() {
     onSuccess: (data) => {
       localStorage.removeItem(storageKey(id));
       toast.success("Exam submitted");
-      navigate(`/result/${data.resultId}`, { replace: true });
+      navigate(`/result/${data.attemptId ?? data.resultId}`, { replace: true });
     },
     onError: (e) =>
       toast.error(e.response?.data?.message || "Unable to submit exam"),
@@ -67,7 +67,7 @@ export default function ExamAttemptPage() {
       submit.mutate();
   }, [remaining, exam.data, submit]);
   if (exam.isLoading)
-    return <p className="p-8 text-zinc-400">Loading secure exam…</p>;
+    return <p className="p-8 text-[#a8b2aa]">Loading secure exam…</p>;
   if (exam.isError || !questions.length)
     return (
       <div className="glass mx-auto max-w-xl rounded-2xl p-8">
@@ -80,6 +80,7 @@ export default function ExamAttemptPage() {
     remaining === null
       ? "--:--"
       : `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
+  const clockClass = `rounded-xl border px-4 py-2 font-mono font-bold ${remaining !== null && remaining < 300 ? "border-[#c94a4a]/50 bg-[#c94a4a]/15 text-[#ffd0d0]" : "border-[#c9b86a]/30 bg-[#1f5a3a]/25 text-[#f2e7a1]"}`;
   const submitNow = () => {
     if (
       window.confirm(
@@ -92,19 +93,19 @@ export default function ExamAttemptPage() {
     <div className="mx-auto max-w-7xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-cyan-300">
+          <p className="text-sm font-semibold tracking-widest text-[#c9b86a]">
             EXAM IN PROGRESS
           </p>
           <h1 className="mt-1 text-2xl font-bold">{exam.data.title}</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 font-mono font-bold text-cyan-200">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className={`${clockClass} lg:hidden min-[1440px]:inline`}>
             {clock}
           </span>
           <button
             title="Fullscreen"
             onClick={() => document.documentElement.requestFullscreen?.()}
-            className="rounded-lg p-2 text-zinc-400 hover:bg-white/5"
+            className="rounded-lg p-2 text-[#a8b2aa] hover:bg-white/5"
           >
             <Maximize size={19} />
           </button>
@@ -113,22 +114,30 @@ export default function ExamAttemptPage() {
       <div className="mb-5 h-2 overflow-hidden rounded-full bg-white/10">
         <div
           style={{ width: `${(answered / questions.length) * 100}%` }}
-          className="h-full bg-gradient-to-r from-violet-500 to-cyan-400"
+          className="h-full bg-[#c9b86a]"
         />
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_270px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_64px] min-[1440px]:grid-cols-[minmax(0,1fr)_280px]">
         <div>
           <QuestionCard
             question={q}
             number={current + 1}
             selected={answers[q.id]}
+            headerAccessory={
+              <span
+                className={`${clockClass} hidden shrink-0 lg:inline min-[1440px]:hidden`}
+              >
+                {clock}
+              </span>
+            }
             onSelect={(optionId) =>
               setAnswers((all) => ({ ...all, [q.id]: optionId }))
             }
           />
-          <div className="mt-5 flex justify-between">
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <Button
               variant="secondary"
+              className="military-secondary"
               disabled={current === 0}
               onClick={() => setCurrent(current - 1)}
             >
@@ -136,36 +145,43 @@ export default function ExamAttemptPage() {
               Previous
             </Button>
             {current === questions.length - 1 ? (
-              <Button disabled={submit.isPending} onClick={submitNow}>
+              <Button
+                className="military-button"
+                disabled={submit.isPending}
+                onClick={submitNow}
+              >
                 <Send size={16} />
                 {submit.isPending ? "Submitting…" : "Submit exam"}
               </Button>
             ) : (
-              <Button onClick={() => setCurrent(current + 1)}>
+              <Button
+                className="military-button"
+                onClick={() => setCurrent(current + 1)}
+              >
                 Next
                 <ChevronRight size={17} />
               </Button>
             )}
           </div>
         </div>
-        <aside className="glass h-fit rounded-2xl p-5">
-          <p className="mb-3 text-xs font-semibold tracking-widest text-zinc-400">
+        <aside className="glass h-fit rounded-2xl p-5 lg:p-3 min-[1440px]:p-5">
+          <p className="mb-3 text-xs font-semibold tracking-widest text-[#c9b86a] lg:hidden min-[1440px]:block">
             QUESTION PALETTE
           </p>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-5 gap-2 lg:grid-cols-1 min-[1440px]:grid-cols-5">
             {questions.map((question, index) => (
               <button
                 key={question.id}
                 onClick={() => setCurrent(index)}
-                className={`grid aspect-square place-items-center rounded-lg text-sm ${current === index ? "ring-2 ring-cyan-300 bg-cyan-400 text-zinc-950" : answers[question.id] ? "bg-violet-500/45 text-white" : "bg-white/5 text-zinc-400"}`}
+                className={`grid aspect-square place-items-center rounded-lg text-sm ${current === index ? "ring-2 ring-[#f2e7a1] bg-[#c9b86a] text-[#08110d]" : answers[question.id] ? "bg-[#1f5a3a] text-white" : "bg-white/5 text-[#a8b2aa]"}`}
               >
                 {index + 1}
               </button>
             ))}
           </div>
-          <div className="mt-5 space-y-1 text-xs text-zinc-400">
+          <div className="mt-5 space-y-1 text-xs text-[#a8b2aa] lg:hidden min-[1440px]:block">
             <p>
-              <i className="mr-2 inline-block size-2 rounded bg-violet-400" />{" "}
+              <i className="mr-2 inline-block size-2 rounded bg-[#1f5a3a]" />{" "}
               Answered
             </p>
             <p>

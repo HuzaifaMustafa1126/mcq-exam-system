@@ -19,7 +19,6 @@ CREATE TABLE students (
   user_id BIGINT UNSIGNED NOT NULL,
   student_number VARCHAR(50) NOT NULL,
   registration_number VARCHAR(50) NULL,
-  semester TINYINT UNSIGNED NULL,
   section VARCHAR(30) NULL,
   `session` VARCHAR(30) NULL,
   phone VARCHAR(30) NULL,

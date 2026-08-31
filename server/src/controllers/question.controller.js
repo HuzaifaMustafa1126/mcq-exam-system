@@ -1,14 +1,14 @@
-import { HTTP_STATUS } from '../constants/httpStatus.js';
-import asyncHandler from '../helpers/asyncHandler.js';
+import { HTTP_STATUS } from "../constants/httpStatus.js";
+import asyncHandler from "../helpers/asyncHandler.js";
 import {
   createQuestion,
   deleteQuestion,
   getQuestionById,
   getQuestions,
   updateQuestion,
-} from '../services/question.service.js';
-import { sendSuccess } from '../utils/response.js';
-import { questionListQuery } from '../utils/query.js';
+} from "../services/question.service.js";
+import { sendSuccess } from "../utils/response.js";
+import { questionListQuery } from "../utils/query.js";
 
 export const create = asyncHandler(async (req, res) => {
   const question = await createQuestion(req.body, req.user);
@@ -32,5 +32,7 @@ export const update = asyncHandler(async (req, res) => {
 
 export const remove = asyncHandler(async (req, res) => {
   await deleteQuestion(req.params.id, req.user);
-  return sendSuccess(res, { data: { message: 'Question deleted successfully' } });
+  return sendSuccess(res, {
+    data: { message: "Question deleted successfully" },
+  });
 });
