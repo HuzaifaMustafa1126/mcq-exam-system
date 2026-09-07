@@ -15,6 +15,7 @@ import {
 
 export default function ExamAttemptPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const exam = useQuery({
     queryKey: ["student-session", id],
     queryFn: () => getStudentQuestions(id, 1),
@@ -25,8 +26,16 @@ export default function ExamAttemptPage() {
   if (exam.isError)
     return (
       <div className="glass rounded-xl p-8">
-        <p>{exam.error.response?.data?.message || "Unable to load exam."}</p>
-        <Button onClick={() => exam.refetch()}>Retry</Button>
+        <p>
+          {exam.error.response?.status === 404
+            ? "Exam is no longer available."
+            : exam.error.response?.data?.message || "Unable to load exam."}
+        </p>
+        {exam.error.response?.status === 404 ? (
+          <Button onClick={() => navigate("/exams")}>Back to Exams</Button>
+        ) : (
+          <Button onClick={() => exam.refetch()}>Retry</Button>
+        )}
       </div>
     );
   return (
@@ -148,6 +157,12 @@ function ExamSession({ id, initial }) {
     return () => clearTimeout(timer);
   }, [page.data, expire, finish]);
   useEffect(() => {
+    if (page.isError && page.error?.response?.status === 404) {
+      toast.error("Exam is no longer available.");
+      navigate("/exams", { replace: true });
+    }
+  }, [page.isError, page.error, navigate]);
+  useEffect(() => {
     const warn = (event) => {
       if (pending.current.size) {
         event.preventDefault();
@@ -228,12 +243,6 @@ function ExamSession({ id, initial }) {
           <h1 className="text-2xl font-bold">{initial.title}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Timer
-            expiresAt={data.expiresAt}
-            serverNow={data.serverNow}
-            receivedAt={data.receivedAt}
-            onExpire={expire}
-          />
           <Button
             variant="secondary"
             onClick={async () => {
@@ -287,6 +296,14 @@ function ExamSession({ id, initial }) {
               question={q}
               number={current + 1}
               selected={answers[q.id]}
+              headerAccessory={
+                <Timer
+                  expiresAt={data.expiresAt}
+                  serverNow={data.serverNow}
+                  receivedAt={data.receivedAt}
+                  onExpire={expire}
+                />
+              }
               onSelect={select}
               disabled={readOnly || submitting}
             />

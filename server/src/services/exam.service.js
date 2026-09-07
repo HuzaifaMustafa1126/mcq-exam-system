@@ -348,17 +348,19 @@ export const deleteExam = async (id, user) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    if (user.role !== "admin")
+      throw new AppError("Only administrators can delete exams", HTTP_STATUS.FORBIDDEN);
     await assertExamAccess(connection, id, user);
     await getExamByIdWithExecutor(connection, id, { lock: true });
-    const [attempts] = await connection.execute(
-      "SELECT id FROM student_exams WHERE exam_id = ? LIMIT 1",
-      [id],
-    );
-    if (attempts.length)
-      throw new AppError(
-        "Exams with attempts cannot be deleted.",
-        HTTP_STATUS.CONFLICT,
-      );
+    await connection.execute(
+      `DELETE student_answers FROM student_answers
+       INNER JOIN student_exams ON student_exams.id = student_answers.student_exam_id
+       WHERE student_exams.exam_id = ?`, [id]);
+    await connection.execute(
+      `DELETE FROM results WHERE student_exam_id IN
+       (SELECT id FROM student_exams WHERE exam_id = ?)`, [id]);
+    await connection.execute("DELETE FROM student_exams WHERE exam_id = ?", [id]);
+    await connection.execute("DELETE FROM exam_questions WHERE exam_id = ?", [id]);
     await connection.execute("DELETE FROM exams WHERE id = ?", [id]);
     await connection.commit();
   } catch (error) {

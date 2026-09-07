@@ -470,8 +470,9 @@ function DeleteModal({ exam, close, confirm, pending }) {
       destructive
     >
       <p>
-        Exams with student attempts cannot be deleted. This action cannot be
-        undone.
+        This exam may contain student attempts, answers and results. Deleting
+        it will permanently remove all related exam data. This action cannot
+        be undone.
       </p>
     </ConfirmDialog>
   );

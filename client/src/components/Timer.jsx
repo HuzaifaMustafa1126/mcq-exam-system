@@ -18,11 +18,13 @@ export default function Timer({ expiresAt, serverNow, receivedAt, onExpire }) {
     const timer = setInterval(tick, 250);
     return () => clearInterval(timer);
   }, [expiresAt, serverNow, receivedAt, onExpire]);
+  const warning = seconds !== null && seconds <= 60;
+  const urgent = seconds !== null && seconds <= 300;
   return (
     <span
       role="timer"
       aria-label="Time remaining"
-      className="rounded-xl border border-[#c9b86a]/40 bg-[#14231a] px-4 py-2 font-mono text-lg font-bold text-[#f2e7a1]"
+      className={`shrink-0 rounded-xl border px-3 py-1.5 font-mono text-sm font-bold ${warning ? "animate-pulse border-[#c94a4a] bg-[#c94a4a]/20 text-[#ffd0d0]" : urgent ? "border-[#c9b86a] bg-[#c9b86a]/15 text-[#f2e7a1]" : "border-[#c9b86a]/40 bg-[#14231a] text-[#f2e7a1]"}`}
     >
       {seconds === null
         ? "--:--"

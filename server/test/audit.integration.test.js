@@ -179,10 +179,6 @@ test(
         /cannot be changed/,
       );
       await assert.rejects(
-        deleteExam(exam.id, { role: "admin" }),
-        /cannot be deleted/,
-      );
-      await assert.rejects(
         updateExam(exam.id, { durationMinutes: 2 }, { role: "admin" }),
         /cannot be edited/,
       );
@@ -245,6 +241,9 @@ test(
     assert.notEqual(nextAttempt.attemptId, attempt.attemptId);
     const oldRetry = await submitStudentExam(user.insertId, exam.id, [], attempt.attemptId);
     assert.equal(oldRetry.resultId, result.resultId, "Retries stay bound to the original attempt even after a retake starts");
+    await deleteExam(exam.id, { role: "admin" });
+    const [deletedExam] = await connection.execute("SELECT id FROM exams WHERE id = ?", [exam.id]);
+    assert.equal(deletedExam.length, 0, "Admin deletion removes an exam with attempts and results");
     } finally {
       await new Promise((resolve) => http.close(resolve));
       Object.assign(pool, originals);
