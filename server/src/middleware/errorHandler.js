@@ -7,6 +7,7 @@ const errorHandler = (error, _req, res, _next) => {
 
   const response = {
     success: false,
+    ...(["EXAM_TIME_COMPLETED", "EXAM_ALREADY_SUBMITTED"].includes(error.code) ? { code: error.code } : {}),
     message: error.isOperational ? error.message : "Internal server error",
     errors: error.details || [],
   };

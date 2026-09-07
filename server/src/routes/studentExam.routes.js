@@ -6,6 +6,7 @@ import {
   getQuestions,
   start,
   submit,
+  saveAnswer,
 } from "../controllers/studentExam.controller.js";
 import { HTTP_STATUS } from "../constants/httpStatus.js";
 import authenticate from "../middleware/auth.middleware.js";
@@ -79,6 +80,7 @@ router.get("/", getAll);
 router.get("/:id", getById);
 router.post("/:examId/start", start);
 router.get("/:examId/questions", questionsPaginationValidation, getQuestions);
+router.put("/:examId/answer", saveAnswer);
 router.post("/:examId/submit", submitValidation, submit);
 
 export default router;

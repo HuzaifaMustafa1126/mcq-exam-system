@@ -85,6 +85,70 @@ const validateExamConstraints = ({
   }
 };
 
+const replaceQuestions = async (
+  connection,
+  examId,
+  questionIds,
+  subjectId,
+  teacherId,
+  passingMarks,
+) => {
+  if (
+    !Array.isArray(questionIds) ||
+    questionIds.length === 0 ||
+    questionIds.length > 2000 ||
+    questionIds.some((id) => !Number.isSafeInteger(id) || id < 1) ||
+    new Set(questionIds).size !== questionIds.length
+  )
+    throw new AppError(
+      "Choose between 1 and 2000 unique questions",
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+    );
+  const [questions] = await connection.execute(
+    `SELECT id, subject_id AS subjectId, created_by_teacher_id AS teacherId, marks, negative_marks AS negativeMarks
+     FROM questions WHERE id IN (${questionIds.map(() => "?").join(",")}) FOR UPDATE`,
+    questionIds,
+  );
+  if (
+    questions.length !== questionIds.length ||
+    questions.some(
+      (q) =>
+        Number(q.subjectId) !== Number(subjectId) ||
+        (teacherId && Number(q.teacherId) !== Number(teacherId)),
+    )
+  )
+    throw new AppError(
+      "Every question must belong to the exam subject and be accessible to you",
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+    );
+  const total = questions.reduce((sum, q) => sum + Number(q.marks), 0);
+  if (Number(passingMarks) > total)
+    throw new AppError(
+      "Passing marks exceed selected question marks",
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+    );
+  const byId = new Map(questions.map((q) => [q.id, q]));
+  await connection.execute("DELETE FROM exam_questions WHERE exam_id = ?", [
+    examId,
+  ]);
+  await connection.query(
+    "INSERT INTO exam_questions (exam_id, question_id, display_order, marks, negative_marks) VALUES ?",
+    [
+      questionIds.map((id, i) => [
+        examId,
+        id,
+        i + 1,
+        byId.get(id).marks,
+        byId.get(id).negativeMarks,
+      ]),
+    ],
+  );
+  await connection.execute("UPDATE exams SET total_marks = ? WHERE id = ?", [
+    total,
+    examId,
+  ]);
+};
+
 export const createExam = async (data, user) => {
   const connection = await pool.getConnection();
   try {
@@ -110,6 +174,15 @@ export const createExam = async (data, user) => {
         data.status ?? "draft",
       ],
     );
+    if (data.questionIds !== undefined)
+      await replaceQuestions(
+        connection,
+        result.insertId,
+        data.questionIds,
+        data.subjectId,
+        teacherId,
+        data.passingMarks,
+      );
     await connection.commit();
     return await getExamByIdWithExecutor(connection, result.insertId);
   } catch (error) {
@@ -187,6 +260,15 @@ export const updateExam = async (id, updates, user) => {
     const currentExam = await getExamByIdWithExecutor(connection, id, {
       lock: true,
     });
+    const [attempts] = await connection.execute(
+      "SELECT id FROM student_exams WHERE exam_id = ? LIMIT 1",
+      [id],
+    );
+    if (attempts.length)
+      throw new AppError(
+        "Exams with attempts cannot be edited. Create a new exam instead.",
+        HTTP_STATUS.CONFLICT,
+      );
     if (updates.subjectId !== undefined)
       await ensureSubjectExists(connection, updates.subjectId);
 
@@ -229,8 +311,31 @@ export const updateExam = async (id, updates, user) => {
       `UPDATE exams SET ${fields.join(", ")} WHERE id = ?`,
       [...values, id],
     );
+    if (updates.questionIds !== undefined)
+      await replaceQuestions(
+        connection,
+        id,
+        updates.questionIds,
+        updates.subjectId ?? currentExam.subjectId,
+        await getTeacherIdForUser(connection, user),
+        updates.passingMarks ?? currentExam.passingMarks,
+      );
+    else if (
+      updates.subjectId !== undefined &&
+      Number(updates.subjectId) !== Number(currentExam.subjectId)
+    ) {
+      const [assigned] = await connection.execute(
+        "SELECT id FROM exam_questions WHERE exam_id = ? LIMIT 1",
+        [id],
+      );
+      if (assigned.length)
+        throw new AppError(
+          "Replace assigned questions when changing the exam subject",
+          HTTP_STATUS.CONFLICT,
+        );
+    }
     await connection.commit();
-    return await getExamById(id, user);
+    return await getExamByIdWithExecutor(connection, id);
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -245,6 +350,15 @@ export const deleteExam = async (id, user) => {
     await connection.beginTransaction();
     await assertExamAccess(connection, id, user);
     await getExamByIdWithExecutor(connection, id, { lock: true });
+    const [attempts] = await connection.execute(
+      "SELECT id FROM student_exams WHERE exam_id = ? LIMIT 1",
+      [id],
+    );
+    if (attempts.length)
+      throw new AppError(
+        "Exams with attempts cannot be deleted.",
+        HTTP_STATUS.CONFLICT,
+      );
     await connection.execute("DELETE FROM exams WHERE id = ?", [id]);
     await connection.commit();
   } catch (error) {

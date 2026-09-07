@@ -270,6 +270,15 @@ export const deleteStudent = async (id) => {
     const student = await getStudentByIdWithExecutor(connection, id, {
       lock: true,
     });
+    const [attempts] = await connection.execute(
+      "SELECT id FROM student_exams WHERE student_id = ? LIMIT 1",
+      [id],
+    );
+    if (attempts.length)
+      throw new AppError(
+        "Students with exam history cannot be deleted. Deactivate the account instead.",
+        HTTP_STATUS.CONFLICT,
+      );
     await connection.execute("DELETE FROM users WHERE id = ?", [
       student.userId,
     ]);

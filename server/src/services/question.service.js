@@ -180,6 +180,17 @@ export const getQuestions = async (
     pool.execute(countSql, values),
   ]);
   const [questions] = questionsResult;
+  if (questions.length) {
+    const [correct] = await pool.execute(
+      `SELECT question_id AS questionId, option_text AS answer FROM question_options WHERE is_correct = TRUE AND question_id IN (${questions.map(() => "?").join(",")})`,
+      questions.map((q) => q.id),
+    );
+    const correctById = new Map(
+      correct.map((option) => [option.questionId, option.answer]),
+    );
+    for (const question of questions)
+      question.correctAnswer = correctById.get(question.id) || "—";
+  }
   const [totalRows] = totalResult;
   const total = Number(totalRows[0].total);
   return {
@@ -211,6 +222,15 @@ export const updateQuestion = async (id, updates, user) => {
     await connection.beginTransaction();
     await assertQuestionAccess(connection, id, user);
     await getQuestionByIdWithExecutor(connection, id, { lock: true });
+    const [usage] = await connection.execute(
+      "SELECT id FROM exam_questions WHERE question_id = ? LIMIT 1 FOR UPDATE",
+      [id],
+    );
+    if (usage.length)
+      throw new AppError(
+        "Questions assigned to exams cannot be changed or deleted. Duplicate the question to create a new version.",
+        HTTP_STATUS.CONFLICT,
+      );
     if (updates.subjectId !== undefined)
       await ensureSubjectExists(connection, updates.subjectId);
     const columnByField = {
@@ -257,6 +277,15 @@ export const deleteQuestion = async (id, user) => {
     await connection.beginTransaction();
     await assertQuestionAccess(connection, id, user);
     await getQuestionByIdWithExecutor(connection, id, { lock: true });
+    const [usage] = await connection.execute(
+      "SELECT id FROM exam_questions WHERE question_id = ? LIMIT 1 FOR UPDATE",
+      [id],
+    );
+    if (usage.length)
+      throw new AppError(
+        "Questions assigned to exams cannot be changed or deleted. Duplicate the question to create a new version.",
+        HTTP_STATUS.CONFLICT,
+      );
     await connection.execute(
       "DELETE FROM question_options WHERE question_id = ?",
       [id],

@@ -1,3 +1,5 @@
+import Textarea from "../Textarea";
+import Select from "../Select";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -5,7 +7,8 @@ import { useForm, useWatch } from "react-hook-form";
 import Button from "../Button";
 import Input from "../Input";
 import Modal from "../Modal";
-import { getAllQuestions } from "../../services/questions";
+import useDebouncedValue from "../../hooks/useDebouncedValue";
+import { getQuestions } from "../../services/questions";
 import { getSubjects } from "../../services/subjects";
 
 const defaultValues = {
@@ -20,8 +23,12 @@ const defaultValues = {
   status: "draft",
 };
 const steps = ["Details", "Rules", "Questions", "Schedule", "Review"];
-const dateValue = (value) =>
-  value ? new Date(value).toISOString().slice(0, 16) : "";
+const dateValue = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
 
 export default function ExamWizardModal({
   open,
@@ -33,9 +40,18 @@ export default function ExamWizardModal({
   const [step, setStep] = useState(0);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [selectedMarksById, setSelectedMarksById] = useState(new Map());
+  const [questionPage, setQuestionPage] = useState(1);
   const [questionSearch, setQuestionSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(questionSearch);
   const [difficulty, setDifficulty] = useState("");
-  const { control, register, trigger, getValues, reset } = useForm({
+  const {
+    control,
+    register,
+    trigger,
+    getValues,
+    reset,
+    formState: { errors },
+  } = useForm({
     defaultValues,
   });
   const subjectId = useWatch({ control, name: "subjectId" });
@@ -45,17 +61,28 @@ export default function ExamWizardModal({
     enabled: open,
   });
   const { data: questionsData, isPending: questionsPending } = useQuery({
-    queryKey: ["questions", "exam-form", subjectId, difficulty, questionSearch],
-    queryFn: () =>
-      getAllQuestions({
-        subjectId: subjectId || undefined,
-        difficulty: difficulty || undefined,
-        search: questionSearch || undefined,
-      }),
-    enabled: open && Boolean(subjectId),
+    queryKey: [
+      "questions",
+      "exam-form",
+      subjectId,
+      difficulty,
+      debouncedSearch,
+      questionPage,
+    ],
+    queryFn: ({ signal }) =>
+      getQuestions(
+        {
+          page: questionPage,
+          limit: 25,
+          subjectId: subjectId || undefined,
+          difficulty: difficulty || undefined,
+          search: debouncedSearch || undefined,
+        },
+        signal,
+      ),
+    enabled: open && step === 2 && Boolean(subjectId),
   });
   // Opening a different exam intentionally resets the wizard's local draft state.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const assigned = exam?.assignedQuestions || [];
     reset(
@@ -67,12 +94,15 @@ export default function ExamWizardModal({
           }
         : defaultValues,
     );
+    // Resetting the wizard draft is intentional when a different exam opens.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIds(new Set(assigned.map((question) => question.id)));
     setSelectedMarksById(
       new Map(
         assigned.map((question) => [question.id, Number(question.marks)]),
       ),
     );
+    setQuestionPage(1);
     setStep(0);
     setQuestionSearch("");
     setDifficulty("");
@@ -128,6 +158,7 @@ export default function ExamWizardModal({
   };
   return (
     <Modal
+      busy={isPending}
       open={open}
       onClose={onClose}
       title={exam?.id ? "Edit exam" : "Create exam"}
@@ -149,6 +180,13 @@ export default function ExamWizardModal({
           </div>
         ))}
       </div>
+      {Object.keys(errors).length > 0 && (
+        <p role="alert" className="mb-4 text-sm text-rose-300">
+          {Object.entries(errors)
+            .map(([field, error]) => error.message || `Check ${field}`)
+            .join(". ")}
+        </p>
+      )}
       {step === 0 && (
         <div className="space-y-4">
           <Input
@@ -161,7 +199,14 @@ export default function ExamWizardModal({
           />
           <Select
             label="Subject"
-            {...register("subjectId", { required: "Subject is required" })}
+            {...register("subjectId", {
+              required: "Subject is required",
+              onChange: () => {
+                setSelectedIds(new Set());
+                setSelectedMarksById(new Map());
+                setQuestionPage(1);
+              },
+            })}
           >
             <option value="">Select a subject</option>
             {subjectData?.subjects?.map((subject) => (
@@ -174,7 +219,7 @@ export default function ExamWizardModal({
             <span className="mb-2 block text-sm font-medium text-zinc-300">
               Description
             </span>
-            <textarea
+            <Textarea
               rows="4"
               className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-white outline-none focus:border-cyan-400/70"
               {...register("description")}
@@ -215,21 +260,51 @@ export default function ExamWizardModal({
               />
               <input
                 value={questionSearch}
-                onChange={(event) => setQuestionSearch(event.target.value)}
+                onChange={(event) => {
+                  setQuestionSearch(event.target.value);
+                  setQuestionPage(1);
+                }}
                 placeholder="Search available questions"
                 className="w-full rounded-xl border border-white/10 bg-zinc-950/60 py-2.5 pl-9 pr-3 text-sm text-white outline-none"
               />
             </div>
-            <select
+            <Select
               value={difficulty}
-              onChange={(event) => setDifficulty(event.target.value)}
+              onChange={(event) => {
+                setDifficulty(event.target.value);
+                setQuestionPage(1);
+              }}
               className="rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2.5 text-sm text-white"
             >
               <option value="">All difficulties</option>
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
-            </select>
+            </Select>
+          </div>
+          <div className="mb-3 flex items-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={questionPage <= 1}
+              onClick={() => setQuestionPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {questionPage} / {questionsData?.pagination?.totalPages || 1}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                !questionsData ||
+                questionPage >= questionsData.pagination.totalPages
+              }
+              onClick={() => setQuestionPage((p) => p + 1)}
+            >
+              Next
+            </Button>
           </div>
           <p className="mb-3 text-sm text-cyan-300">
             {selectedIds.size} selected · {selectedMarks} total marks
@@ -286,7 +361,7 @@ export default function ExamWizardModal({
           totalMarks={selectedMarks}
         />
       )}
-      <div className="mt-6 flex justify-between border-t border-white/10 pt-5">
+      <div className="dialog-actions">
         <Button
           type="button"
           variant="secondary"
@@ -315,21 +390,6 @@ export default function ExamWizardModal({
         )}
       </div>
     </Modal>
-  );
-}
-function Select({ label, children, ...props }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-medium text-zinc-300">
-        {label}
-      </span>
-      <select
-        className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none"
-        {...props}
-      >
-        {children}
-      </select>
-    </label>
   );
 }
 function Review({ values, selectedCount, totalMarks }) {

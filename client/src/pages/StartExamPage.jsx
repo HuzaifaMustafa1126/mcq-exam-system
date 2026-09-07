@@ -56,11 +56,12 @@ export default function StartExamPage() {
         <h2 className="mt-8 text-lg font-bold">Before you begin</h2>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-[#a8b2aa]">
           <li>
-            • The timer starts immediately and the exam submits automatically
-            when time expires.
+            • The timer starts immediately. When time ends, answers lock and you
+            must submit the exam manually.
           </li>
           <li>
-            • Your selected answers are saved on this device while you work.
+            • Your selected answers are saved to the server while you work.
+            Check the saving indicator before leaving.
           </li>
           <li>
             • You can move between questions and submit only when you are ready.

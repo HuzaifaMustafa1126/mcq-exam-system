@@ -1,3 +1,5 @@
+import Select from "../components/Select";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -12,22 +14,20 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import Modal from "../components/Modal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
 import ExamPreviewModal from "../components/exams/ExamPreviewModal";
 import ExamWizardModal from "../components/exams/ExamWizardModal";
 import {
-  assignExamQuestions,
   createExam,
   deleteExam,
   getExam,
   getExamQuestions,
   getExams,
-  removeExamQuestion,
   updateExam,
 } from "../services/exams";
 import { getSubjects } from "../services/subjects";
@@ -51,7 +51,7 @@ export default function ExamsPage() {
   const [wizardExam, setWizardExam] = useState(undefined);
   const [previewId, setPreviewId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search);
   const client = useQueryClient();
   const params = {
     page,
@@ -70,34 +70,8 @@ export default function ExamsPage() {
   });
   const invalidate = () => client.invalidateQueries({ queryKey: ["exams"] });
   const saveMutation = useMutation({
-    mutationFn: async ({ exam, payload }) => {
-      const { questionIds, ...examPayload } = payload;
-      if (!exam?.id) {
-        const created = await createExam(examPayload);
-        try {
-          if (questionIds.length)
-            await assignExamQuestions({ id: created.id, questionIds });
-          return created;
-        } catch (error) {
-          await deleteExam(created.id).catch(() => {});
-          throw error;
-        }
-      }
-      const updated = await updateExam({ id: exam.id, payload: examPayload });
-      const currentIds = new Set(
-        exam.assignedQuestions.map((question) => question.id),
-      );
-      const nextIds = new Set(questionIds);
-      const add = questionIds.filter((id) => !currentIds.has(id));
-      const remove = exam.assignedQuestions.filter(
-        (question) => !nextIds.has(question.id),
-      );
-      if (add.length)
-        await assignExamQuestions({ id: exam.id, questionIds: add });
-      for (const question of remove)
-        await removeExamQuestion({ id: exam.id, questionId: question.id });
-      return updated;
-    },
+    mutationFn: ({ exam, payload }) =>
+      exam?.id ? updateExam({ id: exam.id, payload }) : createExam(payload),
     onSuccess: (_value, variables) => {
       toast.success(
         variables.exam?.id
@@ -377,14 +351,14 @@ export default function ExamsPage() {
 }
 function Filter({ value, onChange, label, children }) {
   return (
-    <select
+    <Select
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="rounded-xl border border-white/10 bg-white/[.03] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-400/60"
     >
       <option value="">{label}</option>
       {children}
-    </select>
+    </Select>
   );
 }
 function Status({ status }) {
@@ -486,23 +460,19 @@ function Error({ retry }) {
 }
 function DeleteModal({ exam, close, confirm, pending }) {
   return (
-    <Modal open={Boolean(exam)} onClose={close} title="Delete exam">
-      <p className="text-sm leading-6 text-zinc-400">
-        Delete <span className="font-medium text-white">{exam?.title}</span>?
-        All question assignments and student attempts will be removed.
+    <ConfirmDialog
+      open={Boolean(exam)}
+      onClose={close}
+      onConfirm={confirm}
+      pending={pending}
+      title="Delete exam?"
+      confirmLabel="Delete exam"
+      destructive
+    >
+      <p>
+        Exams with student attempts cannot be deleted. This action cannot be
+        undone.
       </p>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={close}>
-          Cancel
-        </Button>
-        <button
-          onClick={confirm}
-          disabled={pending}
-          className="rounded-xl bg-rose-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {pending ? "Deleting..." : "Delete exam"}
-        </button>
-      </div>
-    </Modal>
+    </ConfirmDialog>
   );
 }

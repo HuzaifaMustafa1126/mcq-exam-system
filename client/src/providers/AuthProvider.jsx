@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import AuthContext from "../context/authContext";
 
 const TOKEN_KEY = "mcq_token";
@@ -21,6 +22,7 @@ const readStoredAuth = () => {
 };
 
 export default function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [auth, setAuth] = useState(readStoredAuth);
 
   const logout = useCallback(() => {
@@ -28,18 +30,23 @@ export default function AuthProvider({ children }) {
       storage.removeItem(TOKEN_KEY);
       storage.removeItem(USER_KEY);
     }
+    queryClient.clear();
     setAuth({ token: null, user: null });
-  }, []);
+  }, [queryClient]);
 
-  const login = useCallback((payload, { remember = false } = {}) => {
-    const storage = remember ? localStorage : sessionStorage;
-    const otherStorage = remember ? sessionStorage : localStorage;
-    otherStorage.removeItem(TOKEN_KEY);
-    otherStorage.removeItem(USER_KEY);
-    storage.setItem(TOKEN_KEY, payload.token);
-    storage.setItem(USER_KEY, JSON.stringify(payload.user));
-    setAuth({ token: payload.token, user: payload.user });
-  }, []);
+  const login = useCallback(
+    (payload, { remember = false } = {}) => {
+      const storage = remember ? localStorage : sessionStorage;
+      const otherStorage = remember ? sessionStorage : localStorage;
+      otherStorage.removeItem(TOKEN_KEY);
+      otherStorage.removeItem(USER_KEY);
+      storage.setItem(TOKEN_KEY, payload.token);
+      storage.setItem(USER_KEY, JSON.stringify(payload.user));
+      queryClient.clear();
+      setAuth({ token: payload.token, user: payload.user });
+    },
+    [queryClient],
+  );
 
   useEffect(() => {
     window.addEventListener("mcq:unauthorized", logout);

@@ -1,3 +1,5 @@
+import { useAuth } from "../hooks/useAuth";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -12,11 +14,12 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import Modal from "../components/Modal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
 import SubjectDetailsModal from "../components/subjects/SubjectDetailsModal";
 import SubjectFormModal from "../components/subjects/SubjectFormModal";
@@ -37,13 +40,17 @@ const formatDate = (value) =>
 const message = (error, fallback) => error.response?.data?.message || fallback;
 
 export default function SubjectsPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManage = user?.role === "admin";
+  const base = canManage ? "/subjects" : "/teacher/subjects";
   const [view, setView] = useState("card");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [formSubject, setFormSubject] = useState(undefined);
   const [detailsId, setDetailsId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search);
   const queryClient = useQueryClient();
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["subjects", { page, search: deferredSearch }],
@@ -103,10 +110,12 @@ export default function SubjectsPage() {
             Organize the subject catalog and its question banks.
           </p>
         </div>
-        <Button onClick={() => setFormSubject({})}>
-          <Plus size={18} />
-          Add subject
-        </Button>
+        {canManage && (
+          <Button onClick={() => setFormSubject({})}>
+            <Plus size={18} />
+            Add subject
+          </Button>
+        )}
       </header>
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 p-5">
@@ -160,7 +169,8 @@ export default function SubjectsPage() {
                     key={subject.id}
                     subject={subject}
                     index={index}
-                    view={() => setDetailsId(subject.id)}
+                    base={base}
+                    view={() => navigate(`${base}/${subject.id}/questions`)}
                     edit={() => setFormSubject(subject)}
                     remove={() => setDeleteTarget(subject)}
                   />
@@ -169,7 +179,7 @@ export default function SubjectsPage() {
             ) : (
               <SubjectTable
                 subjects={subjects}
-                view={(id) => setDetailsId(id)}
+                view={(id) => navigate(`${base}/${id}/questions`)}
                 edit={(subject) => setFormSubject(subject)}
                 remove={(subject) => setDeleteTarget(subject)}
               />
@@ -199,7 +209,7 @@ export default function SubjectsPage() {
   );
 }
 
-function SubjectCard({ subject, index, view, edit, remove }) {
+function SubjectCard({ subject, index, view, edit, remove, base }) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 12 }}
@@ -219,10 +229,17 @@ function SubjectCard({ subject, index, view, edit, remove }) {
       <p className="mt-4 line-clamp-2 min-h-10 text-sm leading-5 text-zinc-400">
         {subject.description || "No description provided."}
       </p>
+      <div className="mt-4 flex flex-wrap gap-3 text-sm text-[#c9b86a]">
+        <Link to={`${base}/${subject.id}/questions`}>View Questions</Link>
+        <Link to={`${base}/${subject.id}/questions?add=1`}>+ Add Question</Link>
+      </div>
       <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
-        <span className="text-sm text-zinc-500">
+        <Link
+          to={`${base}/${subject.id}/questions`}
+          className="text-sm text-zinc-500"
+        >
           {subject.totalQuestions} questions
-        </span>
+        </Link>
         <Actions view={view} edit={edit} remove={remove} />
       </div>
     </motion.article>
@@ -289,17 +306,22 @@ function SubjectTable({ subjects, view, edit, remove }) {
   );
 }
 function Actions({ view, edit, remove }) {
+  const { user } = useAuth();
   return (
     <div className="flex gap-1">
-      <IconButton label="View subject" onClick={view}>
+      <IconButton label="View questions" onClick={view}>
         <Eye size={16} />
       </IconButton>
-      <IconButton label="Edit subject" onClick={edit}>
-        <Pencil size={16} />
-      </IconButton>
-      <IconButton label="Delete subject" danger onClick={remove}>
-        <Trash2 size={16} />
-      </IconButton>
+      {user?.role === "admin" && (
+        <>
+          <IconButton label="Edit subject" onClick={edit}>
+            <Pencil size={16} />
+          </IconButton>
+          <IconButton label="Delete subject" danger onClick={remove}>
+            <Trash2 size={16} />
+          </IconButton>
+        </>
+      )}
     </div>
   );
 }
@@ -378,6 +400,7 @@ function Loading({ view }) {
   );
 }
 function Empty({ search, add }) {
+  const { user } = useAuth();
   return (
     <div className="grid min-h-75 place-items-center p-8 text-center">
       <div>
@@ -392,7 +415,7 @@ function Empty({ search, add }) {
             ? "Try a different search term."
             : "Create the first subject to start building question banks."}
         </p>
-        {!search && (
+        {!search && user?.role === "admin" && (
           <Button className="mt-5" onClick={add}>
             <Plus size={16} />
             Add subject
@@ -414,23 +437,19 @@ function Error({ retry }) {
 }
 function DeleteModal({ subject, close, confirm, pending }) {
   return (
-    <Modal open={Boolean(subject)} onClose={close} title="Delete subject">
-      <p className="text-sm leading-6 text-zinc-400">
-        Delete <span className="font-medium text-white">{subject?.name}</span>?
-        Subjects already used by questions or exams cannot be deleted.
+    <ConfirmDialog
+      open={Boolean(subject)}
+      onClose={close}
+      onConfirm={confirm}
+      pending={pending}
+      title="Delete subject?"
+      confirmLabel="Delete subject"
+      destructive
+    >
+      <p>
+        Subjects used by questions or exams cannot be deleted. This action
+        cannot be undone.
       </p>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={close}>
-          Cancel
-        </Button>
-        <button
-          onClick={confirm}
-          disabled={pending}
-          className="rounded-xl bg-rose-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {pending ? "Deleting..." : "Delete subject"}
-        </button>
-      </div>
-    </Modal>
+    </ConfirmDialog>
   );
 }

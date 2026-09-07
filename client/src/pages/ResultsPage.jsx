@@ -1,3 +1,5 @@
+import Select from "../components/Select";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -23,7 +25,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import Skeleton from "../components/Skeleton";
@@ -56,7 +58,7 @@ export default function ResultsPage() {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(initialFilters);
   const [detailsId, setDetailsId] = useState(null);
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search);
   const params = {
     page,
     limit: SIZE,
@@ -488,18 +490,6 @@ function ChartCard({ title, children }) {
       <h2 className="font-bold">{title}</h2>
       <div className="mt-3">{children}</div>
     </Card>
-  );
-}
-function Select({ value, onChange, label, children }) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="rounded-xl border border-white/10 bg-white/[.03] px-3 py-2.5 text-sm text-white outline-none"
-    >
-      <option value="">{label}</option>
-      {children}
-    </select>
   );
 }
 function Status({ value }) {

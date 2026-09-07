@@ -1,3 +1,5 @@
+import { useAuth } from "../hooks/useAuth";
+import Select from "../components/Select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -12,15 +14,17 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import toast from "react-hot-toast";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import Modal from "../components/Modal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
 import QuestionFormModal from "../components/questions/QuestionFormModal";
 import QuestionPreviewModal from "../components/questions/QuestionPreviewModal";
-import { getSubjects } from "../services/subjects";
+import { getSubjects, getSubject } from "../services/subjects";
 import {
   createQuestion,
   deleteQuestion,
@@ -29,7 +33,7 @@ import {
   updateQuestion,
 } from "../services/questions";
 
-const SIZE = 10;
+const SIZE = 25;
 const initialFilters = { subjectId: "", difficulty: "", status: "" };
 const date = (value) =>
   value
@@ -40,37 +44,56 @@ const date = (value) =>
 const message = (error, fallback) => error.response?.data?.message || fallback;
 
 export default function QuestionsPage() {
+  const { subjectId } = useParams();
+  return <QuestionBank key={subjectId || "global"} subjectId={subjectId} />;
+}
+function QuestionBank({ subjectId }) {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const subjectQuery = useQuery({
+    queryKey: ["subject", subjectId],
+    queryFn: () => getSubject(subjectId),
+    enabled: Boolean(subjectId),
+  });
+  const subject = subjectQuery.data;
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(initialFilters);
-  const [formQuestion, setFormQuestion] = useState(undefined);
+  const [formQuestion, setFormQuestion] = useState(
+    searchParams.get("add") === "1" ? {} : undefined,
+  );
   const [previewId, setPreviewId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search);
   const client = useQueryClient();
   const params = {
     page,
     limit: SIZE,
     search: deferredSearch || undefined,
-    subjectId: filters.subjectId || undefined,
+    subjectId: subjectId || filters.subjectId || undefined,
     difficulty: filters.difficulty || undefined,
     status: filters.status || undefined,
   };
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["questions", params],
-    queryFn: () => getQuestions(params),
+    queryFn: ({ signal }) => getQuestions(params, signal),
   });
   const { data: subjectData } = useQuery({
     queryKey: ["subjects", "question-filter"],
     queryFn: () => getSubjects({ page: 1, limit: 100 }),
   });
   const invalidate = () =>
-    client.invalidateQueries({ queryKey: ["questions"] });
+    Promise.all(
+      ["questions", "subjects", "subject"].map((key) =>
+        client.invalidateQueries({ queryKey: [key] }),
+      ),
+    );
   const createMutation = useMutation({
     mutationFn: createQuestion,
     onSuccess: () => {
-      toast.success("Question created successfully");
-      setFormQuestion(undefined);
+      toast.success("Question created successfully", {
+        id: "question-created",
+      });
       invalidate();
     },
     onError: (error) =>
@@ -80,7 +103,6 @@ export default function QuestionsPage() {
     mutationFn: updateQuestion,
     onSuccess: () => {
       toast.success("Question updated successfully");
-      setFormQuestion(undefined);
       invalidate();
     },
     onError: (error) =>
@@ -104,8 +126,8 @@ export default function QuestionsPage() {
   };
   const save = (payload) =>
     formQuestion?.id
-      ? updateMutation.mutate({ id: formQuestion.id, payload })
-      : createMutation.mutate(payload);
+      ? updateMutation.mutateAsync({ id: formQuestion.id, payload })
+      : createMutation.mutateAsync(payload);
   const duplicate = async (id) => {
     try {
       const question = await getQuestion(id);
@@ -118,18 +140,33 @@ export default function QuestionsPage() {
       toast.error(message(error, "Unable to duplicate question"));
     }
   };
+  if (subjectId && subjectQuery.isPending) return <Loading />;
+  if (subjectId && subjectQuery.isError)
+    return <Error retry={subjectQuery.refetch} />;
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
+      {subject && (
+        <Link
+          to={
+            user?.role === "teacher" ? "/teacher/subjects" : "/admin/subjects"
+          }
+          className="text-[#c9b86a]"
+        >
+          ← Subjects
+        </Link>
+      )}
       <header className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold tracking-[.16em] text-cyan-300">
             ASSESSMENT CONTENT
           </p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-            Question bank
+            {subject?.name || "Question bank"}
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Create, review, and organize multiple choice questions.
+            {subject
+              ? `${subject.code} · ${subject.totalQuestions} questions`
+              : "Create, review, and organize multiple choice questions."}
           </p>
         </div>
         <Button className="shrink-0" onClick={() => setFormQuestion({})}>
@@ -160,17 +197,19 @@ export default function QuestionsPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Filter
-              value={filters.subjectId}
-              onChange={(value) => filter("subjectId", value)}
-              label="All subjects"
-            >
-              {subjectData?.subjects?.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </Filter>
+            {!subject && (
+              <Filter
+                value={filters.subjectId}
+                onChange={(value) => filter("subjectId", value)}
+                label="All subjects"
+              >
+                {subjectData?.subjects?.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </Filter>
+            )}
             <Filter
               value={filters.difficulty}
               onChange={(value) => filter("difficulty", value)}
@@ -222,6 +261,7 @@ export default function QuestionsPage() {
                     {[
                       "Question",
                       "Subject",
+                      "Correct Answer",
                       "Marks",
                       "Difficulty",
                       "Status",
@@ -251,6 +291,9 @@ export default function QuestionsPage() {
                       </td>
                       <td className="px-5 py-4 text-zinc-300">
                         {question.subjectName}
+                      </td>
+                      <td className="max-w-60 px-5 py-4">
+                        <p className="line-clamp-2">{question.correctAnswer}</p>
                       </td>
                       <td className="px-5 py-4">{question.marks}</td>
                       <td className="px-5 py-4">
@@ -312,6 +355,7 @@ export default function QuestionsPage() {
         )}
       </Card>
       <QuestionFormModal
+        subject={subject}
         open={formQuestion !== undefined}
         question={formQuestion?.questionText ? formQuestion : null}
         onClose={() => setFormQuestion(undefined)}
@@ -334,14 +378,14 @@ export default function QuestionsPage() {
 
 function Filter({ value, onChange, label, children }) {
   return (
-    <select
+    <Select
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="rounded-xl border border-white/10 bg-white/[.03] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-400/60"
     >
       <option value="">{label}</option>
       {children}
-    </select>
+    </Select>
   );
 }
 function Badge({ type, value }) {
@@ -448,22 +492,19 @@ function Error({ retry }) {
 }
 function DeleteModal({ question, close, confirm, pending }) {
   return (
-    <Modal open={Boolean(question)} onClose={close} title="Delete question">
-      <p className="text-sm leading-6 text-zinc-400">
-        Delete this question? Questions assigned to exams cannot be deleted.
+    <ConfirmDialog
+      open={Boolean(question)}
+      onClose={close}
+      onConfirm={confirm}
+      pending={pending}
+      title="Delete question?"
+      confirmLabel="Delete question"
+      destructive
+    >
+      <p>
+        Questions assigned to exams cannot be deleted. This action cannot be
+        undone.
       </p>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={close}>
-          Cancel
-        </Button>
-        <button
-          onClick={confirm}
-          disabled={pending}
-          className="rounded-xl bg-rose-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {pending ? "Deleting..." : "Delete question"}
-        </button>
-      </div>
-    </Modal>
+    </ConfirmDialog>
   );
 }

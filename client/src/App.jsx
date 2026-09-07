@@ -1,7 +1,7 @@
 import { AnimatePresence } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import Notifications from "./components/Notifications";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PageFallback from "./components/PageFallback";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
@@ -36,18 +36,7 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 export default function App() {
   return (
     <BrowserRouter>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          ariaProps: { role: "status", "aria-live": "polite" },
-          style: {
-            background: "#14231a",
-            color: "#f5f5f0",
-            border: "1px solid rgba(242,231,161,.18)",
-          },
-        }}
-      />
+      <Notifications />
       <RouteErrorBoundary>
         <Suspense fallback={<PageFallback />}>
           <AnimatePresence mode="wait">
@@ -70,6 +59,11 @@ export default function App() {
               <Route element={<ProtectedRoute roles={["teacher"]} />}>
                 <Route element={<TeacherLayout />}>
                   <Route path="/teacher" element={<TeacherDashboard />} />
+                  <Route path="/teacher/subjects" element={<SubjectsPage />} />
+                  <Route
+                    path="/teacher/subjects/:subjectId/questions"
+                    element={<QuestionsPage />}
+                  />
                   <Route
                     path="/teacher/questions"
                     element={<TeacherQuestionsPage />}
@@ -91,6 +85,14 @@ export default function App() {
                   <Route path="/admin/teachers" element={<TeachersPage />} />
                   <Route path="/admin/students" element={<StudentsPage />} />
                   <Route path="/admin/subjects" element={<SubjectsPage />} />
+                  <Route
+                    path="/subjects/:subjectId/questions"
+                    element={<QuestionsPage />}
+                  />
+                  <Route
+                    path="/admin/subjects/:subjectId/questions"
+                    element={<QuestionsPage />}
+                  />
                   <Route path="/admin/questions" element={<QuestionsPage />} />
                   <Route path="/admin/exams" element={<AdminExamsPage />} />
                   <Route path="/admin/results" element={<ResultsPage />} />

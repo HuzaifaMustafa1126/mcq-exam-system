@@ -1,12 +1,15 @@
+import { useState } from "react";
+import Pagination from "../components/Pagination";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { getStudentResults } from "../services/student";
 import Card from "../components/Card";
 
 export default function StudentResultsPage() {
+  const [page, setPage] = useState(1);
   const query = useQuery({
-    queryKey: ["student-results"],
-    queryFn: getStudentResults,
+    queryKey: ["student-results", page],
+    queryFn: () => getStudentResults({ page, limit: 25 }),
   });
   const results = query.data?.results || [];
   return (
@@ -18,6 +21,11 @@ export default function StudentResultsPage() {
       <Card className="mt-7 overflow-x-auto p-0">
         {query.isLoading ? (
           <p className="p-6 text-[#a8b2aa]">Loading results…</p>
+        ) : query.isError ? (
+          <p role="alert" className="p-6">
+            Unable to load results.{" "}
+            <button onClick={() => query.refetch()}>Retry</button>
+          </p>
         ) : results.length ? (
           <table className="min-w-[680px] w-full text-left text-sm">
             <thead className="border-b border-[#f2e7a1]/14 text-[#a8b2aa]">
@@ -62,6 +70,7 @@ export default function StudentResultsPage() {
           </p>
         )}
       </Card>
+      <Pagination pagination={query.data?.pagination} onPage={setPage} />
     </div>
   );
 }

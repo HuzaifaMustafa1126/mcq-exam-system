@@ -5,6 +5,7 @@ export default function QuestionCard({
   onSelect,
   number,
   headerAccessory,
+  disabled = false,
 }) {
   return (
     <motion.article
@@ -28,8 +29,10 @@ export default function QuestionCard({
         {question.options.map((option, index) => (
           <button
             key={option.id}
+            disabled={disabled}
+            aria-pressed={selected === option.id}
             onClick={() => onSelect(option.id)}
-            className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left text-sm transition ${selected === option.id ? "border-[#c9b86a] bg-[#1f5a3a]/55 text-[#f5f5f0]" : "border-[#f2e7a1]/14 bg-white/[.025] text-[#d7ddd7] hover:border-[#c9b86a]/55 hover:bg-[#1f5a3a]/20"}`}
+            className={`flex w-full items-center gap-4 disabled:opacity-100 rounded-xl border p-4 text-left text-sm transition ${selected === option.id ? "border-[#c9b86a] bg-[#1f5a3a]/55 text-[#f5f5f0]" : "border-[#f2e7a1]/14 bg-white/[.025] text-[#d7ddd7] hover:border-[#c9b86a]/55 hover:bg-[#1f5a3a]/20"}`}
           >
             <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-current text-xs font-bold">
               {String.fromCharCode(65 + index)}

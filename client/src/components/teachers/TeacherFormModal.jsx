@@ -1,3 +1,4 @@
+import Select from "../Select";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Button from "../Button";
@@ -40,6 +41,7 @@ export default function TeacherFormModal({
 
   return (
     <Modal
+      busy={isPending}
       open={open}
       onClose={onClose}
       title={isEditing ? "Edit teacher" : "Add teacher"}
@@ -115,18 +117,23 @@ export default function TeacherFormModal({
             <span className="mb-2 block text-sm font-medium text-zinc-300">
               Status
             </span>
-            <select
+            <Select
               className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none transition focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10"
               {...register("status")}
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="suspended">Suspended</option>
-            </select>
+            </Select>
           </label>
         </div>
-        <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-3 border-t border-white/10 bg-zinc-950/95 px-4 pt-5 backdrop-blur sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <div className="dialog-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending}
+            onClick={onClose}
+          >
             Cancel
           </Button>
           <Button type="submit" disabled={isPending}>

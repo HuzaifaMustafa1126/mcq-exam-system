@@ -18,6 +18,7 @@ const studentItems = [
 ];
 const teacherItems = [
   { to: "/teacher", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/teacher/subjects", label: "Subjects", icon: BookOpen },
   { to: "/teacher/questions", label: "Questions", icon: HelpCircle },
   { to: "/teacher/exams", label: "Assigned exams", icon: BookOpen },
   { to: "/teacher/results", label: "Results", icon: BarChart3 },
@@ -85,6 +86,7 @@ export default function Sidebar({
             <NavLink
               key={label}
               to={to}
+              end={to === home}
               onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${isActive ? "student-nav-active" : "student-nav-item"}`

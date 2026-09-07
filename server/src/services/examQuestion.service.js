@@ -8,6 +8,17 @@ const getExam = async (connection, examId, { lock = false } = {}) => {
     [examId],
   );
   if (!rows[0]) throw new AppError("Exam not found", HTTP_STATUS.NOT_FOUND);
+  if (lock) {
+    const [attempts] = await connection.execute(
+      "SELECT id FROM student_exams WHERE exam_id = ? LIMIT 1",
+      [examId],
+    );
+    if (attempts.length)
+      throw new AppError(
+        "Questions cannot be reassigned after an exam has attempts.",
+        HTTP_STATUS.CONFLICT,
+      );
+  }
   return rows[0];
 };
 
@@ -26,10 +37,10 @@ const assertExamAccess = async (connection, examId, user) => {
   if (!rows[0]) throw new AppError("Exam not found", HTTP_STATUS.NOT_FOUND);
 };
 
-const getQuestions = async (connection, questionIds) => {
+const getQuestions = async (connection, questionIds, user) => {
   const placeholders = questionIds.map(() => "?").join(", ");
   const [questions] = await connection.execute(
-    `SELECT id, subject_id AS subjectId, marks FROM questions WHERE id IN (${placeholders})`,
+    `SELECT id, subject_id AS subjectId, created_by_teacher_id AS teacherId, marks FROM questions WHERE id IN (${placeholders}) FOR UPDATE`,
     questionIds,
   );
   if (questions.length !== questionIds.length) {
@@ -37,6 +48,20 @@ const getQuestions = async (connection, questionIds) => {
       "One or more questions were not found",
       HTTP_STATUS.NOT_FOUND,
     );
+  }
+  if (user.role === "teacher") {
+    const [teacher] = await connection.execute(
+      "SELECT id FROM teachers WHERE user_id = ?",
+      [user.id],
+    );
+    if (
+      !teacher[0] ||
+      questions.some((q) => Number(q.teacherId) !== Number(teacher[0].id))
+    )
+      throw new AppError(
+        "You can only assign your own questions",
+        HTTP_STATUS.FORBIDDEN,
+      );
   }
   return questions;
 };
@@ -75,7 +100,7 @@ export const assignQuestions = async (examId, questionIds, user) => {
     await connection.beginTransaction();
     await assertExamAccess(connection, examId, user);
     const exam = await getExam(connection, examId, { lock: true });
-    const questions = await getQuestions(connection, questionIds);
+    const questions = await getQuestions(connection, questionIds, user);
 
     if (questions.some((question) => question.subjectId !== exam.subjectId)) {
       throw new AppError(

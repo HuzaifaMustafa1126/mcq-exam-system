@@ -19,23 +19,19 @@ export default function TeacherDashboard() {
   const { user } = useAuth();
   const questions = useQuery({
     queryKey: ["teacher-questions"],
-    queryFn: () => getQuestions({ page: 1, limit: 100 }),
+    queryFn: () => getQuestions({ page: 1, limit: 1 }),
   });
   const exams = useQuery({
     queryKey: ["teacher-exams"],
-    queryFn: () => getExams({ page: 1, limit: 100 }),
+    queryFn: () => getExams({ page: 1, limit: 10 }),
   });
   const results = useQuery({
     queryKey: ["teacher-results"],
-    queryFn: () => getResults({ page: 1, limit: 100 }),
+    queryFn: () => getResults({ page: 1, limit: 5 }),
   });
-  const list = results.data?.results || [];
-  const average = list.length
-    ? (
-        list.reduce((total, result) => total + result.percentage, 0) /
-        list.length
-      ).toFixed(1)
-    : 0;
+  const average = Number(results.data?.summary?.averagePercentage || 0).toFixed(
+    1,
+  );
   const chart =
     exams.data?.exams?.map((exam) => ({
       name: exam.title,
@@ -44,7 +40,7 @@ export default function TeacherDashboard() {
   const summary = [
     ["Total Questions", questions.data?.pagination?.total || 0, BookOpen],
     ["Total Exams", exams.data?.pagination?.total || 0, ClipboardList],
-    ["Students Appeared", results.data?.summary?.total || 0, Users],
+    ["Exam Attempts", results.data?.summary?.total || 0, Users],
     ["Average Score", `${average}%`, Bar],
   ];
   return (

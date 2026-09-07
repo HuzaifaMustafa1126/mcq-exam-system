@@ -1,3 +1,5 @@
+import Select from "../components/Select";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -12,11 +14,11 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import Modal from "../components/Modal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
 import StudentFormModal from "../components/students/StudentFormModal";
 import StudentProfileModal from "../components/students/StudentProfileModal";
@@ -44,7 +46,7 @@ export default function StudentsPage() {
   const [formStudent, setFormStudent] = useState(undefined);
   const [detailsId, setDetailsId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search);
   const queryClient = useQueryClient();
   const params = {
     page,
@@ -287,14 +289,14 @@ export default function StudentsPage() {
 
 function FilterSelect({ value, onChange, label, children }) {
   return (
-    <select
+    <Select
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="rounded-xl border border-white/10 bg-white/[.03] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-400/60"
     >
       <option value="">{label}</option>
       {children}
-    </select>
+    </Select>
   );
 }
 function Status({ status }) {
@@ -396,23 +398,19 @@ function ErrorState({ retry }) {
 }
 function DeleteModal({ student, close, confirm, pending }) {
   return (
-    <Modal open={Boolean(student)} onClose={close} title="Delete student">
-      <p className="text-sm leading-6 text-zinc-400">
-        Delete <span className="font-medium text-white">{student?.name}</span>?
-        This removes their account and cannot be undone.
+    <ConfirmDialog
+      open={Boolean(student)}
+      onClose={close}
+      onConfirm={confirm}
+      pending={pending}
+      title="Delete student?"
+      confirmLabel="Delete student"
+      destructive
+    >
+      <p>
+        Students with exam history cannot be deleted. Deactivate their account
+        instead. This action cannot be undone.
       </p>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={close}>
-          Cancel
-        </Button>
-        <button
-          onClick={confirm}
-          disabled={pending}
-          className="rounded-xl bg-rose-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {pending ? "Deleting..." : "Delete student"}
-        </button>
-      </div>
-    </Modal>
+    </ConfirmDialog>
   );
 }

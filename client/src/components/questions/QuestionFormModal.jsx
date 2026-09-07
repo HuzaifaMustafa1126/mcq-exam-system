@@ -1,5 +1,7 @@
+import Textarea from "../Textarea";
+import Select from "../Select";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Button from "../Button";
 import Input from "../Input";
@@ -13,7 +15,7 @@ const defaults = {
   optionB: "",
   optionC: "",
   optionD: "",
-  correctAnswer: "A",
+  correctAnswer: "",
   marks: 1,
   difficulty: "easy",
   status: "active",
@@ -40,11 +42,12 @@ export default function QuestionFormModal({
   onClose,
   onSubmit,
   isPending,
+  subject,
 }) {
   const { data: subjectsData } = useQuery({
     queryKey: ["subjects", "form"],
     queryFn: () => getSubjects({ page: 1, limit: 100 }),
-    enabled: open,
+    enabled: open && !subject,
   });
   const {
     register,
@@ -52,55 +55,86 @@ export default function QuestionFormModal({
     reset,
     formState: { errors },
   } = useForm({ defaultValues: defaults });
+  const [saveMode, setSaveMode] = useState("close");
   useEffect(() => {
-    reset(question ? fromQuestion(question) : defaults);
-  }, [question, open, reset]);
-  const submit = (values) =>
-    onSubmit({
-      subjectId: Number(values.subjectId),
-      questionText: values.questionText,
-      marks: Number(values.marks),
-      difficulty: values.difficulty,
-      status: values.status,
-      options: letters.map((letter) => ({
-        optionText: values[`option${letter}`],
-        isCorrect: values.correctAnswer === letter,
-      })),
-    });
+    reset(
+      question
+        ? fromQuestion(question)
+        : { ...defaults, subjectId: subject?.id || "" },
+    );
+  }, [question, open, reset, subject?.id]);
+  const submit = async (values, event) => {
+    const form = event.target;
+    try {
+      await onSubmit({
+        subjectId: Number(subject?.id || values.subjectId),
+        questionText: values.questionText,
+        marks: Number(values.marks),
+        difficulty: values.difficulty,
+        status: values.status,
+        options: letters.map((letter) => ({
+          optionText: values[`option${letter}`],
+          isCorrect: values.correctAnswer === letter,
+        })),
+      });
+      if (saveMode === "another") {
+        reset({
+          ...defaults,
+          subjectId: subject?.id || values.subjectId,
+          marks: values.marks,
+          difficulty: values.difficulty,
+          status: values.status,
+          correctAnswer: "",
+        });
+        requestAnimationFrame(() =>
+          form.querySelector('[name="questionText"]')?.focus(),
+        );
+      } else onClose();
+    } catch {
+      /* Mutation displays the error; preserve the draft. */
+    }
+  };
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={question ? "Edit question" : "Add question"}
+      busy={isPending}
+      title={question?.id ? "Edit question" : "Add question"}
     >
       <form onSubmit={handleSubmit(submit)} noValidate className="space-y-4">
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-zinc-300">
-            Subject
-          </span>
-          <select
-            className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none focus:border-cyan-400/70"
-            {...register("subjectId", { required: "Subject is required" })}
-          >
-            <option value="">Select a subject</option>
-            {subjectsData?.subjects?.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name} ({subject.code})
-              </option>
-            ))}
-          </select>
-          {errors.subjectId && (
-            <span className="mt-1 block text-xs text-rose-400">
-              {errors.subjectId.message}
+        {subject ? (
+          <p className="rounded-xl border border-[#c9b86a]/30 p-3">
+            Subject: <strong>{subject.name}</strong> · {subject.code}
+          </p>
+        ) : (
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Subject
             </span>
-          )}
-        </label>
+            <Select
+              className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none focus:border-cyan-400/70"
+              {...register("subjectId", { required: "Subject is required" })}
+            >
+              <option value="">Select a subject</option>
+              {subjectsData?.subjects?.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name} ({subject.code})
+                </option>
+              ))}
+            </Select>
+            {errors.subjectId && (
+              <span className="mt-1 block text-xs text-rose-400">
+                {errors.subjectId.message}
+              </span>
+            )}
+          </label>
+        )}
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-zinc-300">
             Question text
           </span>
-          <textarea
-            rows="4"
+          <Textarea
+            rows="3"
             className="w-full resize-y rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-white outline-none focus:border-cyan-400/70"
             placeholder="Write the question..."
             {...register("questionText", {
@@ -113,30 +147,55 @@ export default function QuestionFormModal({
             </span>
           )}
         </label>
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-zinc-300">
-            Options and correct answer
-          </p>
+        <div className="space-y-2">
           {letters.map((letter) => (
-            <div key={letter} className="flex items-center gap-3">
-              <input
-                type="radio"
-                value={letter}
-                aria-label={`Mark option ${letter} as correct`}
-                className="size-4 accent-cyan-400"
-                {...register("correctAnswer")}
-              />
-              <Input
-                label={`Option ${letter}`}
-                className="flex-1"
-                error={errors[`option${letter}`]?.message}
-                {...register(`option${letter}`, {
-                  required: `Option ${letter} is required`,
-                })}
-              />
-            </div>
+            <label
+              key={letter}
+              className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-3 text-sm"
+            >
+              <span>Option {letter}</span>
+              <div>
+                <input
+                  aria-label={`Option ${letter}`}
+                  {...register(`option${letter}`, {
+                    required: `Option ${letter} is required`,
+                  })}
+                />
+                {errors[`option${letter}`] && (
+                  <p role="alert" className="text-xs text-rose-300">
+                    {errors[`option${letter}`].message}
+                  </p>
+                )}
+              </div>
+            </label>
           ))}
         </div>
+        <fieldset>
+          <legend className="mb-2 text-sm">Correct Answer</legend>
+          <div className="flex gap-3">
+            {letters.map((letter) => (
+              <label
+                key={letter}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#c9b86a]/30 px-4 py-2 has-checked:bg-[#1f5a3a]"
+              >
+                <input
+                  type="radio"
+                  value={letter}
+                  aria-label={`Mark option ${letter} as correct`}
+                  {...register("correctAnswer", {
+                    required: "Choose the correct answer",
+                  })}
+                />
+                {letter}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {errors.correctAnswer && (
+          <p role="alert" className="text-sm text-rose-300">
+            {errors.correctAnswer.message}
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-3">
           <Input
             label="Marks"
@@ -159,34 +218,41 @@ export default function QuestionFormModal({
             <option value="inactive">Inactive</option>
           </Select>
         </div>
-        <div className="flex justify-end gap-3 border-t border-white/10 pt-5">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <div className="dialog-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending}
+            onClick={onClose}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={isPending}>
+          {!question?.id && (
+            <Button
+              type="submit"
+              disabled={isPending}
+              onClick={() => {
+                setSaveMode("another");
+              }}
+            >
+              Save & Add Another
+            </Button>
+          )}
+          <Button
+            type="submit"
+            disabled={isPending}
+            onClick={() => {
+              setSaveMode("close");
+            }}
+          >
             {isPending
               ? "Saving..."
-              : question
+              : question?.id
                 ? "Save changes"
-                : "Create question"}
+                : "Save & Close"}
           </Button>
         </div>
       </form>
     </Modal>
-  );
-}
-function Select({ label, children, ...props }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-medium text-zinc-300">
-        {label}
-      </span>
-      <select
-        className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none focus:border-cyan-400/70"
-        {...props}
-      >
-        {children}
-      </select>
-    </label>
   );
 }

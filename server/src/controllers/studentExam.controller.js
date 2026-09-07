@@ -5,6 +5,7 @@ import {
   getStudentExams,
   startStudentExam,
   submitStudentExam,
+  saveStudentAnswer,
 } from "../services/studentExam.service.js";
 import { sendSuccess } from "../utils/response.js";
 import { paginationQuery } from "../utils/query.js";
@@ -45,6 +46,13 @@ export const submit = asyncHandler(async (req, res) => {
     req.user.id,
     req.params.examId,
     req.body.answers,
+    req.body.attemptId,
   );
   return sendSuccess(res, { data });
 });
+
+export const saveAnswer = asyncHandler(async (req, res) =>
+  sendSuccess(res, {
+    data: await saveStudentAnswer(req.user.id, req.params.examId, req.body),
+  }),
+);

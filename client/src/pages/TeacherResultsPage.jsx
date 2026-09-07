@@ -1,18 +1,21 @@
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, Search } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
+import Pagination from "../components/Pagination";
 import Card from "../components/Card";
 import ResultDetailsModal from "../components/results/ResultDetailsModal";
 import { getResults } from "../services/results";
 
 export default function TeacherResultsPage() {
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [detailsId, setDetailsId] = useState(null);
-  const deferred = useDeferredValue(search);
-  const { data, isPending } = useQuery({
-    queryKey: ["teacher-results", deferred],
+  const deferred = useDebouncedValue(search);
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: ["teacher-results", deferred, page],
     queryFn: () =>
-      getResults({ page: 1, limit: 100, search: deferred || undefined }),
+      getResults({ page, limit: 25, search: deferred || undefined }),
   });
   const results = data?.results || [];
   return (
@@ -31,7 +34,10 @@ export default function TeacherResultsPage() {
             />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search student results"
               className="w-full rounded-xl border border-white/10 bg-white/[.03] py-2.5 pl-10 pr-4 text-sm text-white outline-none"
             />
@@ -39,6 +45,13 @@ export default function TeacherResultsPage() {
         </div>
         {isPending ? (
           <p className="p-8 text-zinc-500">Loading results...</p>
+        ) : isError ? (
+          <p role="alert" className="p-6">
+            Unable to load results.{" "}
+            <button onClick={() => refetch()}>Retry</button>
+          </p>
+        ) : results.length === 0 ? (
+          <p className="p-6">No results found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-200 text-left text-sm">
@@ -90,6 +103,7 @@ export default function TeacherResultsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <button
+                        aria-label="View result details"
                         onClick={() => setDetailsId(result.attemptId)}
                         className="rounded-lg p-2 text-cyan-300 hover:bg-white/5"
                       >
@@ -103,6 +117,7 @@ export default function TeacherResultsPage() {
           </div>
         )}
       </Card>
+      <Pagination pagination={data?.pagination} onPage={setPage} />
       <ResultDetailsModal
         attemptId={detailsId}
         onClose={() => setDetailsId(null)}

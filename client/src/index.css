@@ -130,6 +130,21 @@ input {
   border-color: #c9b86a !important;
   box-shadow: 0 0 0 4px rgba(201, 184, 106, 0.1) !important;
 }
+.question-palette-scroll {
+  scrollbar-color: rgba(201, 184, 106, 0.7) rgba(255, 255, 255, 0.05);
+  scrollbar-width: thin;
+}
+.question-palette-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.question-palette-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+.question-palette-scroll::-webkit-scrollbar-thumb {
+  background: rgba(201, 184, 106, 0.7);
+  border-radius: 999px;
+}
 @media (max-width: 1199px) {
   .student-main {
     padding: 24px;
@@ -284,5 +299,176 @@ input {
 @media (max-width: 767px) {
   .academy-main main {
     padding: 16px;
+  }
+}
+
+/* Shared application layers and dialog/form geometry. */
+:root {
+  --layer-dropdown: 30;
+  --layer-header: 40;
+  --layer-overlay: 50;
+  --layer-modal: 60;
+  --layer-toast: 70;
+  color-scheme: dark;
+}
+.modal-shell {
+  margin: auto;
+  padding: 0;
+  width: calc(100vw - 24px);
+  max-width: 48rem;
+  max-height: 90dvh;
+  color: #f5f5f0;
+  background: #0b1610;
+  border: 1px solid #c9b86a40;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.modal-shell[open] {
+  display: flex;
+  flex-direction: column;
+}
+.modal-shell::backdrop {
+  background: #000b;
+  backdrop-filter: blur(4px);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #c9b86a30;
+  flex-shrink: 0;
+}
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: #526145 #0b1610;
+}
+.modal-body > * + * {
+  margin-top: 1rem;
+}
+.modal-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #c9b86a30;
+  background: #101e15;
+}
+.modal-footer > div {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  width: 100%;
+  justify-content: flex-end;
+}
+.academy-modal input,
+.academy-modal textarea,
+.academy-modal select {
+  width: 100%;
+  border-radius: 0.75rem;
+  background: #08110d;
+  color: #f5f5f0;
+  border: 1px solid #c9b86a35;
+  padding: 0.65rem 0.8rem;
+}
+.academy-modal input[type="radio"],
+.academy-modal input[type="checkbox"] {
+  width: 1rem;
+  accent-color: #c9b86a;
+}
+select option {
+  background: #101e15;
+  color: #f5f5f0;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #c9b86a;
+  outline-offset: 3px;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+@media (max-width: 640px) {
+  .modal-shell {
+    max-height: calc(100dvh - 24px);
+  }
+  .modal-body,
+  .modal-header,
+  .modal-footer {
+    padding: 0.9rem;
+  }
+}
+.academy-select {
+  width: 100%;
+  border: 1px solid #c9b86a35;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  background: #0b1610;
+  color: #f5f5f0;
+}
+@supports (appearance: base-select) {
+  .academy-select,
+  .academy-select::picker(select) {
+    appearance: base-select;
+  }
+  .academy-select::picker(select) {
+    background: #101e15;
+    color: #f5f5f0;
+    border: 1px solid #c9b86a70;
+    border-radius: 0.75rem;
+    padding: 0.35rem;
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+  .academy-select option {
+    padding: 0.65rem;
+    border-radius: 0.4rem;
+  }
+  .academy-select option:checked,
+  .academy-select option:hover,
+  .academy-select option:focus {
+    background: #c9b86a;
+    color: #08110d;
+  }
+}
+.academy-modal [class*="text-cyan"],
+.academy-modal [class*="text-violet"] {
+  color: #c9b86a;
+}
+.academy-modal [class*="bg-cyan"],
+.academy-modal [class*="bg-violet"] {
+  background-color: #1f5a3a;
+}
+@media (max-width: 640px) {
+  .modal-footer .dialog-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .modal-footer .dialog-actions:has(> :nth-child(3)) > :first-child {
+    grid-column: 1 / -1;
+  }
+  .modal-footer button {
+    padding: 0.65rem 0.6rem;
   }
 }

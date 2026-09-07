@@ -1,3 +1,4 @@
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -11,11 +12,11 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import Modal from "../components/Modal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
 import TeacherDetailsModal from "../components/teachers/TeacherDetailsModal";
 import TeacherFormModal from "../components/teachers/TeacherFormModal";
@@ -42,7 +43,7 @@ export default function TeachersPage() {
   const [formTeacher, setFormTeacher] = useState(undefined);
   const [detailsId, setDetailsId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search);
   const queryClient = useQueryClient();
   const queryKey = [
     "teachers",
@@ -351,24 +352,19 @@ function ErrorState({ onRetry }) {
 }
 function DeleteModal({ teacher, onClose, onConfirm, isPending }) {
   return (
-    <Modal open={Boolean(teacher)} onClose={onClose} title="Delete teacher">
-      <p className="text-sm leading-6 text-zinc-400">
-        Delete <span className="font-medium text-white">{teacher?.name}</span>?
-        Their account and associated records may no longer be accessible. This
-        action cannot be undone.
+    <ConfirmDialog
+      open={Boolean(teacher)}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      pending={isPending}
+      title="Delete teacher?"
+      confirmLabel="Delete teacher"
+      destructive
+    >
+      <p>
+        Their account will be removed. Existing authored questions and exams
+        will be preserved. This action cannot be undone.
       </p>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <button
-          onClick={onConfirm}
-          disabled={isPending}
-          className="rounded-xl bg-rose-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:opacity-60"
-        >
-          {isPending ? "Deleting..." : "Delete teacher"}
-        </button>
-      </div>
-    </Modal>
+    </ConfirmDialog>
   );
 }

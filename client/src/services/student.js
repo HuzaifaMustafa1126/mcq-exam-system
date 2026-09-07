@@ -8,13 +8,23 @@ export const getStudentExam = async (id) =>
   (await api.get(`/student/exams/${id}`)).data.data;
 export const startStudentExam = async (id) =>
   (await api.post(`/student/exams/${id}/start`)).data.data;
-export const getStudentQuestions = async (id) =>
-  (await api.get(`/student/exams/${id}/questions`, { params: { limit: 100 } }))
+export const getStudentQuestions = async (id, page = 1, signal) => {
+  const receivedAt = performance.now();
+  const data = (
+    await api.get(`/student/exams/${id}/questions`, {
+      params: { page, limit: 1 },
+      signal,
+    })
+  ).data.data;
+  return { ...data, receivedAt };
+};
+export const saveStudentAnswer = async ({ id, ...payload }) =>
+  (await api.put(`/student/exams/${id}/answer`, payload)).data.data;
+export const submitStudentExam = async ({ id, attemptId }) =>
+  (await api.post(`/student/exams/${id}/submit`, { attemptId, answers: [] }))
     .data.data;
-export const submitStudentExam = async ({ id, answers }) =>
-  (await api.post(`/student/exams/${id}/submit`, { answers })).data.data;
-export const getStudentResults = async () =>
-  (await api.get("/student/results")).data.data;
+export const getStudentResults = async (params) =>
+  (await api.get("/student/results", { params })).data.data;
 export const getStudentResult = async (id) =>
   (await api.get(`/student/results/${id}`)).data.data;
 export const updateProfile = async (payload) =>

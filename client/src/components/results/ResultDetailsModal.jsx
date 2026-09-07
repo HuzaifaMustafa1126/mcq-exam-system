@@ -26,7 +26,7 @@ export default function ResultDetailsModal({ attemptId, onClose }) {
         </p>
       )}
       {data && (
-        <div className="max-h-[70vh] overflow-y-auto pr-1">
+        <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="font-bold">{data.studentName}</p>

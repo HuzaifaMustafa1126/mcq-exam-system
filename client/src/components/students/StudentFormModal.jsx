@@ -1,3 +1,4 @@
+import Select from "../Select";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Button from "../Button";
@@ -40,6 +41,7 @@ export default function StudentFormModal({
   };
   return (
     <Modal
+      busy={isPending}
       open={open}
       onClose={onClose}
       title={editing ? "Edit student" : "Add student"}
@@ -132,8 +134,13 @@ export default function StudentFormModal({
             <option value="suspended">Suspended</option>
           </Select>
         </div>
-        <div className="flex justify-end gap-3 border-t border-white/10 pt-5">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <div className="dialog-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending}
+            onClick={onClose}
+          >
             Cancel
           </Button>
           <Button type="submit" disabled={isPending}>
@@ -146,25 +153,5 @@ export default function StudentFormModal({
         </div>
       </form>
     </Modal>
-  );
-}
-
-function Select({ label, error, children, ...props }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-medium text-zinc-300">
-        {label}
-      </span>
-      <select
-        className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white outline-none transition focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10"
-        {...props}
-      >
-        <option value="">Select</option>
-        {children}
-      </select>
-      {error && (
-        <span className="mt-1 block text-xs text-rose-400">{error}</span>
-      )}
-    </label>
   );
 }

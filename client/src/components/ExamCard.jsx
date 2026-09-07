@@ -37,7 +37,9 @@ export default function ExamCard({ exam }) {
       <Link to={`/exam/${exam.id}`} className="mt-6 block">
         <Button className="military-button w-full py-2.5">
           <Play size={16} />
-          Start Exam
+          {["in_progress", "expired"].includes(exam.attemptStatus)
+            ? "Resume Exam"
+            : "Start Exam"}
         </Button>
       </Link>
     </Card>
